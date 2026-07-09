@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { hasSupabaseConfig, supabase } from "./supabaseClient";
+import { friendlyError } from "./errors";
 import {
   addComment,
   archiveSnack,
@@ -16,6 +17,11 @@ import {
 import { ensureAnonymousProfile, saveDisplayName, saveProfile, type Profile } from "./profile";
 
 const emptySnack: SnackInput = { name: "", category: "", note: "", imageUrl: "" };
+const exampleSnack = {
+  name: "Trader Joe's Peanut Butter Pretzels",
+  category: "Crunchy",
+  note: "A safe first nomination: salty, snackable, and meeting-friendly.",
+};
 
 export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -48,7 +54,7 @@ export default function App() {
         setMessage("");
         await refresh(nextProfile);
       })
-      .catch((error: Error) => setMessage(error.message));
+      .catch((error: Error) => setMessage(friendlyError(error)));
   }, []);
 
   async function run(action: () => Promise<void>) {
@@ -57,7 +63,7 @@ export default function App() {
       setMessage("");
       await action();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Something went sideways.");
+      setMessage(friendlyError(error));
     } finally {
       setBusy(false);
     }
@@ -230,7 +236,28 @@ export default function App() {
               Refresh
             </button>
           </div>
-          {snacks.length === 0 ? <p className="empty">No snacks yet. Be brave. Nominate the first crunch.</p> : null}
+          {snacks.length === 0 ? (
+            <article className="snack-card example-card">
+              <div className="snack-image">?</div>
+              <div className="snack-body">
+                <div className="snack-title">
+                  <div>
+                    <h3>{exampleSnack.name}</h3>
+                    <p>{exampleSnack.category} example</p>
+                  </div>
+                  <strong>0</strong>
+                </div>
+                <p>{exampleSnack.note}</p>
+                <button
+                  className="ghost"
+                  onClick={() => setSnackDraft({ ...exampleSnack, imageUrl: "" })}
+                  disabled={!profile || busy}
+                >
+                  Use example
+                </button>
+              </div>
+            </article>
+          ) : null}
           {snacks.map((snack) => {
             const owned = profile?.user.id === snack.created_by;
             return (

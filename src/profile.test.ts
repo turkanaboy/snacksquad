@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { friendlyError } from "./errors";
 import { getStoredDisplayName, normalizeDisplayName, saveDisplayName } from "./profile";
 
 class MemoryStorage implements Storage {
@@ -30,5 +31,7 @@ assert.equal(normalizeDisplayName("   "), "Snack Fan");
 assert.equal(getStoredDisplayName(storage), "Snack Fan");
 assert.equal(saveDisplayName(" Grace ", storage), "Grace");
 assert.equal(getStoredDisplayName(storage), "Grace");
+assert.match(friendlyError(new Error("Anonymous sign-ins are disabled")), /Enable them in Auth settings/);
+assert.match(friendlyError(new Error("permission denied for table snacks")), /API grants migration/);
 
 console.log("profile tests passed");
