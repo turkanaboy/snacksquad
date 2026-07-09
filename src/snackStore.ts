@@ -87,9 +87,12 @@ export function snacksToCsv(snacks: Snack[]): string {
   return rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n");
 }
 
-export async function listSnacks(client: Db, user: User): Promise<Snack[]> {
+export async function listSnacks(client: Db, user: User, includeArchived = false): Promise<Snack[]> {
+  let snacksQuery = client.from("snacks").select("*").order("created_at", { ascending: false });
+  if (!includeArchived) snacksQuery = snacksQuery.eq("archived", false);
+
   const [snacksResult, votesResult, commentsResult] = await Promise.all([
-    client.from("snacks").select("*").eq("archived", false).order("created_at", { ascending: false }),
+    snacksQuery,
     client.from("snack_votes").select("*"),
     client.from("snack_comments").select("*").eq("deleted", false).order("created_at", { ascending: true }),
   ]);

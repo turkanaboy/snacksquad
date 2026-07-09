@@ -35,5 +35,5 @@
 ## Admin
 
 - [ ] Add a lightweight moderator cleanup path.
-- [ ] Add an archive view for old snacks.
+- [x] Add an archive view for old snacks.
 - [x] Add export to CSV if the snack board becomes useful history.

@@ -35,6 +35,7 @@ export default function App() {
   const [editingSnack, setEditingSnack] = useState<string | null>(null);
   const [message, setMessage] = useState("Loading Snack Squad...");
   const [busy, setBusy] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const duplicate = useMemo(() => findExactDuplicate(snacks, snackDraft.name), [snacks, snackDraft.name]);
   const similarSnacks = useMemo(
@@ -55,7 +56,7 @@ export default function App() {
 
   async function refresh(currentProfile = profile) {
     if (!supabase || !currentProfile) return;
-    const nextSnacks = await listSnacks(supabase, currentProfile.user);
+    const nextSnacks = await listSnacks(supabase, currentProfile.user, showArchived);
     setSnacks(nextSnacks);
   }
 
@@ -182,6 +183,10 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  useEffect(() => {
+    if (profile) void refresh(profile);
+  }, [showArchived]);
+
   return (
     <main className="shell">
       <section className="masthead">
@@ -270,6 +275,9 @@ export default function App() {
               <button className="ghost" onClick={() => exportSnacks()} disabled={snacks.length === 0}>
                 Export CSV
               </button>
+              <button className="ghost" onClick={() => setShowArchived((value) => !value)} disabled={!profile || busy}>
+                {showArchived ? "Active only" : "Show archive"}
+              </button>
               <button className="ghost" onClick={() => run(() => refresh())} disabled={!profile || busy}>
                 Refresh
               </button>
@@ -307,38 +315,42 @@ export default function App() {
           {snacks.map((snack) => {
             const owned = profile?.user.id === snack.created_by;
             return (
-              <article key={snack.id} className="snack-card">
+              <article key={snack.id} className={snack.archived ? "snack-card archived-card" : "snack-card"}>
                 {snack.image_url ? <img src={snack.image_url} alt="" /> : <div className="snack-image">{snack.name.slice(0, 1)}</div>}
                 <div className="snack-body">
                   <div className="snack-title">
                     <div>
                       <h3>{snack.name}</h3>
-                      <p>{snack.category || "Snack"} by {snack.display_name}</p>
+                      <p>{snack.archived ? "Archived" : snack.category || "Snack"} by {snack.display_name}</p>
                     </div>
                     <strong>{snack.score ?? 0}</strong>
                   </div>
                   {snack.note ? <p>{snack.note}</p> : null}
-                  <div className="actions">
-                    <button onClick={() => voteFor(snack)} disabled={!profile || busy}>
-                      Vote
-                    </button>
-                    {owned ? (
-                      <>
-                        <button className="ghost" onClick={() => startEdit(snack)}>Edit</button>
-                        <button className="ghost danger" onClick={() => removeSnack(snack)}>
-                          Delete
+                  {!snack.archived ? (
+                    <>
+                      <div className="actions">
+                        <button onClick={() => voteFor(snack)} disabled={!profile || busy}>
+                          Vote
                         </button>
-                      </>
-                    ) : null}
-                  </div>
-                  <form className="comment-form" onSubmit={(event) => submitComment(event, snack)}>
-                    <input
-                      value={comments[snack.id] || ""}
-                      onChange={(event) => setComments((draft) => ({ ...draft, [snack.id]: event.target.value }))}
-                      placeholder="Add a snack take"
-                    />
-                    <button disabled={!profile || busy}>Comment</button>
-                  </form>
+                        {owned ? (
+                          <>
+                            <button className="ghost" onClick={() => startEdit(snack)}>Edit</button>
+                            <button className="ghost danger" onClick={() => removeSnack(snack)}>
+                              Delete
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                      <form className="comment-form" onSubmit={(event) => submitComment(event, snack)}>
+                        <input
+                          value={comments[snack.id] || ""}
+                          onChange={(event) => setComments((draft) => ({ ...draft, [snack.id]: event.target.value }))}
+                          placeholder="Add a snack take"
+                        />
+                        <button disabled={!profile || busy}>Comment</button>
+                      </form>
+                    </>
+                  ) : null}
                   <div className="comments">
                     {(snack.comments ?? []).map((comment) => (
                       <p key={comment.id}>

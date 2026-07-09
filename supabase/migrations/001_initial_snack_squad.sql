@@ -60,7 +60,7 @@ create policy "profiles update own" on public.profiles
   with check ((select auth.uid()) = user_id);
 
 create policy "snacks readable" on public.snacks
-  for select to anon, authenticated using (archived = false);
+  for select to anon, authenticated using (true);
 
 create policy "snacks insert own" on public.snacks
   for insert to authenticated with check ((select auth.uid()) = created_by);
