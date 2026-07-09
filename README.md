@@ -7,7 +7,7 @@ Remote-office snack board for suggestions, votes, and comments.
 1. Create a Supabase project and enable anonymous sign-ins in Auth settings.
 2. Copy `.env.example` to `.env.local`.
 3. Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
-4. Apply `supabase/migrations/001_initial_snack_squad.sql` with `supabase db push` or the hosted SQL editor. If the first migration was already run before `002_api_grants.sql` existed, run that follow-up SQL too.
+4. Apply `supabase/migrations/001_initial_snack_squad.sql` with `supabase db push` or the hosted SQL editor. If the first migration was already run, apply each later numbered migration in order.
 5. Install and run:
 
 ```bash
@@ -22,7 +22,7 @@ npm run dev
 
 - Shared snack board with anonymous session ownership and typed display names.
 - Snack suggestions, duplicate nudges, votes, comments, and author-owned cleanup.
-- Image URL previews, pick of the day, weekly local bracket voting, personal ratings, derived badges, archive view, and CSV export.
+- Image URL previews, optional source notes, pick of the day, weekly local bracket voting, personal ratings, derived badges, archive view, and CSV export.
 
 ## Guardrails
 

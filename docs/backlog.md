@@ -8,8 +8,8 @@
 
 - [x] Add an empty-state example snack suggestion.
 - [x] Show clearer errors for missing Supabase config vs hosted auth/config failures.
-- [ ] Add a small "copied from Slack" source note field after users ask for source tracking.
-- [ ] Add basic mobile spacing pass after the first real team test.
+- [x] Add a small "copied from Slack" source note field after users ask for source tracking.
+- [x] Add basic mobile spacing pass after the first real team test.
 
 ## Slack Loop
 

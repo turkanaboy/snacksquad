@@ -23,7 +23,7 @@ import {
 } from "./snackStore";
 import { ensureAnonymousProfile, saveDisplayName, saveProfile, type Profile } from "./profile";
 
-const emptySnack: SnackInput = { name: "", category: "", note: "", imageUrl: "" };
+const emptySnack: SnackInput = { name: "", category: "", note: "", sourceNote: "", imageUrl: "" };
 const exampleSnack = {
   name: "Trader Joe's Peanut Butter Pretzels",
   category: "Crunchy",
@@ -146,6 +146,7 @@ export default function App() {
       name: snack.name,
       category: snack.category ?? "",
       note: snack.note ?? "",
+      sourceNote: snack.source_note ?? "",
       imageUrl: snack.image_url ?? "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -280,6 +281,14 @@ export default function App() {
               placeholder="Why does this belong in snack lore?"
             />
           </label>
+          <label>
+            Source note
+            <input
+              value={snackDraft.sourceNote}
+              onChange={(event) => updateDraft("sourceNote", event.target.value)}
+              placeholder="Copied from #snacks, meeting idea..."
+            />
+          </label>
           {duplicate && duplicate.id !== editingSnack ? (
             <p className="duplicate">Looks like "{duplicate.name}" is already on the board.</p>
           ) : null}
@@ -402,6 +411,7 @@ export default function App() {
                     <strong>{snack.score ?? 0}</strong>
                   </div>
                   {snack.note ? <p>{snack.note}</p> : null}
+                  {snack.source_note ? <p className="source-note">{snack.source_note}</p> : null}
                   {!snack.archived ? (
                     <>
                       <div className="actions">

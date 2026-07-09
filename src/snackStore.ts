@@ -6,6 +6,7 @@ export type Snack = {
   normalized_name: string;
   category: string | null;
   note: string | null;
+  source_note: string | null;
   image_url: string | null;
   created_by: string;
   display_name: string;
@@ -33,6 +34,7 @@ export type SnackInput = {
   name: string;
   category?: string;
   note?: string;
+  sourceNote?: string;
   imageUrl?: string;
 };
 
@@ -176,6 +178,7 @@ export async function createSnack(
     normalized_name: normalizeSnackName(name),
     category: cleanText(input.category),
     note: cleanText(input.note),
+    source_note: cleanText(input.sourceNote),
     image_url: cleanImageUrl(input.imageUrl),
     created_by: user.id,
     display_name: displayName,
@@ -201,6 +204,7 @@ export async function updateSnack(
       normalized_name: normalizeSnackName(name),
       category: cleanText(input.category),
       note: cleanText(input.note),
+      source_note: cleanText(input.sourceNote),
       image_url: cleanImageUrl(input.imageUrl),
       updated_at: new Date().toISOString(),
     })

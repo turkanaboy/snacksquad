@@ -35,6 +35,7 @@ const csvSnack = {
   score: 2,
   display_name: "Ada",
   note: 'Has "snap"',
+  source_note: "#snacks",
   image_url: "",
 } as Snack;
 assert.match(snacksToCsv([csvSnack]), /"Has ""snap"""/);

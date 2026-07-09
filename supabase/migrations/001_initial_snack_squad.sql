@@ -11,6 +11,7 @@ create table public.snacks (
   normalized_name text not null,
   category text,
   note text,
+  source_note text,
   image_url text,
   created_by uuid not null references auth.users(id) on delete cascade,
   display_name text not null,
