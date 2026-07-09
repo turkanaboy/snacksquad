@@ -176,6 +176,21 @@ h2 {
   text-align: right;
 }
 
+.bracket {
+  display: grid;
+  gap: 10px;
+}
+
+.bracket-match {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bracket-pick {
+  background: #31572c;
+}
+
 .rating-row select {
   width: 90px;
 }
@@ -275,6 +290,7 @@ h2 {
 
   .comment-form,
   .profile div,
+  .bracket-match,
   .rating-row,
   .actions {
     align-items: stretch;

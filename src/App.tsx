@@ -9,6 +9,8 @@ import {
   findExactDuplicate,
   findSimilarDuplicates,
   getSnackBadges,
+  getWeekKey,
+  getWeeklyBracket,
   listSnacks,
   pickSnackOfTheDay,
   setRating,
@@ -27,6 +29,7 @@ const exampleSnack = {
   category: "Crunchy",
   note: "A safe first nomination: salty, snackable, and meeting-friendly.",
 };
+const bracketVoteKey = `snack-squad-bracket-${getWeekKey()}`;
 
 export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -38,6 +41,13 @@ export default function App() {
   const [message, setMessage] = useState("Loading Snack Squad...");
   const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [bracketVotes, setBracketVotes] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(bracketVoteKey) || "{}") as Record<string, string>;
+    } catch {
+      return {};
+    }
+  });
 
   const duplicate = useMemo(() => findExactDuplicate(snacks, snackDraft.name), [snacks, snackDraft.name]);
   const similarSnacks = useMemo(
@@ -47,6 +57,7 @@ export default function App() {
   const pickOfTheDay = useMemo(() => pickSnackOfTheDay(snacks), [snacks]);
   const ratedSnacks = useMemo(() => snacks.filter((snack) => snack.personal_rating), [snacks]);
   const badges = useMemo(() => getSnackBadges(snacks), [snacks]);
+  const bracket = useMemo(() => getWeeklyBracket(snacks), [snacks]);
   const imagePreview = useMemo(() => {
     const imageUrl = snackDraft.imageUrl ?? "";
     if (!imageUrl.trim()) return null;
@@ -196,6 +207,12 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  function voteBracket(matchKey: string, snackId: string) {
+    const nextVotes = { ...bracketVotes, [matchKey]: snackId };
+    setBracketVotes(nextVotes);
+    localStorage.setItem(bracketVoteKey, JSON.stringify(nextVotes));
+  }
+
   useEffect(() => {
     if (profile) void refresh(profile);
   }, [showArchived]);
@@ -312,6 +329,30 @@ export default function App() {
                   <b>{badge.snack.name}</b>
                 </p>
               ))}
+            </section>
+          ) : null}
+          {bracket.length > 0 ? (
+            <section className="pick-card bracket">
+              <p className="eyebrow">Weekly bracket</p>
+              {bracket.map((match, index) => {
+                const matchKey = `${match.left.id}-${match.right?.id ?? "bye"}`;
+                const votedFor = bracketVotes[matchKey];
+                const contenders = match.right ? [match.left, match.right] : [match.left];
+                return (
+                  <div key={matchKey} className="bracket-match">
+                    {contenders.map((snack) => (
+                      <button
+                        key={snack.id}
+                        className={votedFor === snack.id ? "bracket-pick" : "ghost"}
+                        onClick={() => voteBracket(matchKey, snack.id)}
+                      >
+                        {snack.name}
+                      </button>
+                    ))}
+                    {!match.right ? <span>Match {index + 1}: bye week</span> : null}
+                  </div>
+                );
+              })}
             </section>
           ) : null}
           {ratedSnacks.length > 0 ? (

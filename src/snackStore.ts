@@ -93,6 +93,11 @@ export type SnackBadge = {
   snack: Snack;
 };
 
+export type BracketMatch = {
+  left: Snack;
+  right: Snack | null;
+};
+
 export function getSnackBadges(snacks: Snack[]): SnackBadge[] {
   const active = snacks.filter((snack) => !snack.archived);
   if (active.length === 0) return [];
@@ -107,6 +112,25 @@ export function getSnackBadges(snacks: Snack[]): SnackBadge[] {
   if (personalFavorite) badges.push({ label: "My favorite", snack: personalFavorite });
 
   return badges;
+}
+
+export function getWeekKey(today = new Date()): string {
+  const firstDay = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
+  const day = Math.floor((today.getTime() - firstDay.getTime()) / 86400000);
+  return `${today.getUTCFullYear()}-W${String(Math.floor(day / 7) + 1).padStart(2, "0")}`;
+}
+
+export function getWeeklyBracket(snacks: Snack[]): BracketMatch[] {
+  const nominated = snacks
+    .filter((snack) => !snack.archived)
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || a.name.localeCompare(b.name))
+    .slice(0, 8);
+
+  const matches: BracketMatch[] = [];
+  for (let index = 0; index < nominated.length; index += 2) {
+    matches.push({ left: nominated[index], right: nominated[index + 1] ?? null });
+  }
+  return matches;
 }
 
 export async function listSnacks(client: Db, user: User, includeArchived = false): Promise<Snack[]> {

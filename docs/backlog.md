@@ -26,8 +26,8 @@
 ## Culture Features
 
 - [x] Pick of the day.
-- [ ] Weekly bracket nominations.
-- [ ] Weekly bracket voting.
+- [x] Weekly bracket nominations.
+- [x] Weekly bracket voting.
 - [x] Personal snack rating log.
 - [x] Badge/superlative definitions.
 - [x] Badge awarding UI.

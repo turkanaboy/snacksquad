@@ -5,6 +5,8 @@ import {
   findExactDuplicate,
   findSimilarDuplicates,
   getSnackBadges,
+  getWeekKey,
+  getWeeklyBracket,
   normalizeSnackName,
   pickSnackOfTheDay,
   snacksToCsv,
@@ -48,5 +50,7 @@ assert.deepEqual(getSnackBadges([badgeSnack]).map((badge) => badge.label), [
   "Most debated",
   "My favorite",
 ]);
+assert.equal(getWeekKey(new Date("2026-07-09T00:00:00Z")), "2026-W28");
+assert.equal(getWeeklyBracket([badgeSnack]).length, 1);
 
 console.log("snack store tests passed");
