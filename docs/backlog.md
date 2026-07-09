@@ -25,7 +25,7 @@
 
 ## Culture Features
 
-- [ ] Pick of the day.
+- [x] Pick of the day.
 - [ ] Weekly bracket nominations.
 - [ ] Weekly bracket voting.
 - [ ] Personal snack rating log.
@@ -36,4 +36,4 @@
 
 - [ ] Add a lightweight moderator cleanup path.
 - [ ] Add an archive view for old snacks.
-- [ ] Add export to CSV if the snack board becomes useful history.
+- [x] Add export to CSV if the snack board becomes useful history.

@@ -9,7 +9,9 @@ import {
   findExactDuplicate,
   findSimilarDuplicates,
   listSnacks,
+  pickSnackOfTheDay,
   setVote,
+  snacksToCsv,
   updateSnack,
   type Snack,
   type SnackComment,
@@ -39,6 +41,7 @@ export default function App() {
     () => findSimilarDuplicates(snacks, snackDraft.name).filter((snack) => snack.id !== editingSnack && snack.id !== duplicate?.id),
     [duplicate?.id, editingSnack, snackDraft.name, snacks],
   );
+  const pickOfTheDay = useMemo(() => pickSnackOfTheDay(snacks), [snacks]);
   const imagePreview = useMemo(() => {
     const imageUrl = snackDraft.imageUrl ?? "";
     if (!imageUrl.trim()) return null;
@@ -170,6 +173,15 @@ export default function App() {
     });
   }
 
+  function exportSnacks() {
+    const url = URL.createObjectURL(new Blob([snacksToCsv(snacks)], { type: "text/csv" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "snack-squad.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <main className="shell">
       <section className="masthead">
@@ -254,10 +266,22 @@ export default function App() {
         <section className="snack-list" aria-live="polite">
           <div className="list-head">
             <h2>Snack board</h2>
-            <button className="ghost" onClick={() => run(() => refresh())} disabled={!profile || busy}>
-              Refresh
-            </button>
+            <div className="actions">
+              <button className="ghost" onClick={() => exportSnacks()} disabled={snacks.length === 0}>
+                Export CSV
+              </button>
+              <button className="ghost" onClick={() => run(() => refresh())} disabled={!profile || busy}>
+                Refresh
+              </button>
+            </div>
           </div>
+          {pickOfTheDay ? (
+            <article className="pick-card">
+              <p className="eyebrow">Pick of the day</p>
+              <h3>{pickOfTheDay.name}</h3>
+              <p>{pickOfTheDay.category || "Snack"} by {pickOfTheDay.display_name}</p>
+            </article>
+          ) : null}
           {snacks.length === 0 ? (
             <article className="snack-card example-card">
               <div className="snack-image">?</div>

@@ -65,6 +65,28 @@ export function findSimilarDuplicates<T extends { normalized_name: string }>(sna
   return snacks.filter((snack) => words.some((word) => snack.normalized_name.includes(word))).slice(0, 3);
 }
 
+export function pickSnackOfTheDay<T>(snacks: T[], today = new Date()): T | null {
+  if (snacks.length === 0) return null;
+  const key = today.toISOString().slice(0, 10);
+  const index = Array.from(key).reduce((sum, char) => sum + char.charCodeAt(0), 0) % snacks.length;
+  return snacks[index];
+}
+
+export function snacksToCsv(snacks: Snack[]): string {
+  const rows = [
+    ["Name", "Category", "Score", "Suggested by", "Pitch", "Image URL"],
+    ...snacks.map((snack) => [
+      snack.name,
+      snack.category ?? "",
+      String(snack.score ?? 0),
+      snack.display_name,
+      snack.note ?? "",
+      snack.image_url ?? "",
+    ]),
+  ];
+  return rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n");
+}
+
 export async function listSnacks(client: Db, user: User): Promise<Snack[]> {
   const [snacksResult, votesResult, commentsResult] = await Promise.all([
     client.from("snacks").select("*").eq("archived", false).order("created_at", { ascending: false }),

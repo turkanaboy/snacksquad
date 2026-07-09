@@ -95,7 +95,8 @@ h2 {
 
 .profile,
 .submit-card,
-.snack-card {
+.snack-card,
+.pick-card {
   border: 1px solid #ded6ca;
   border-radius: 8px;
   background: #fffdfa;
@@ -151,6 +152,14 @@ h2 {
 
 .list-head {
   justify-content: space-between;
+}
+
+.pick-card {
+  padding: 16px;
+}
+
+.pick-card h3 {
+  margin-bottom: 6px;
 }
 
 .snack-card {
