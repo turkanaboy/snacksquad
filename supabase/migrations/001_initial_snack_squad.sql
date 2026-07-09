@@ -50,15 +50,27 @@ create table public.snack_ratings (
   primary key (snack_id, user_id)
 );
 
+create table public.bracket_votes (
+  week_key text not null,
+  match_key text not null,
+  snack_id uuid not null references public.snacks(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (week_key, match_key, user_id)
+);
+
 alter table public.profiles enable row level security;
 alter table public.snacks enable row level security;
 alter table public.snack_votes enable row level security;
 alter table public.snack_comments enable row level security;
 alter table public.snack_ratings enable row level security;
+alter table public.bracket_votes enable row level security;
 
 grant select on public.profiles, public.snacks, public.snack_votes, public.snack_comments to anon, authenticated;
 grant select on public.snack_ratings to authenticated;
-grant insert, update on public.profiles, public.snacks, public.snack_votes, public.snack_comments, public.snack_ratings to authenticated;
+grant select on public.bracket_votes to anon, authenticated;
+grant insert, update on public.profiles, public.snacks, public.snack_votes, public.snack_comments, public.snack_ratings, public.bracket_votes to authenticated;
 
 create policy "profiles readable" on public.profiles
   for select to anon, authenticated using (true);
@@ -111,6 +123,17 @@ create policy "ratings upsert own" on public.snack_ratings
   for insert to authenticated with check ((select auth.uid()) = user_id);
 
 create policy "ratings update own" on public.snack_ratings
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy "bracket votes readable" on public.bracket_votes
+  for select to anon, authenticated using (true);
+
+create policy "bracket votes upsert own" on public.bracket_votes
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+
+create policy "bracket votes update own" on public.bracket_votes
   for update to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);

@@ -19,6 +19,13 @@ export type Snack = {
   personal_rating?: number;
 };
 
+export type BracketVote = {
+  week_key: string;
+  match_key: string;
+  snack_id: string;
+  user_id: string;
+};
+
 export type SnackComment = {
   id: string;
   snack_id: string;
@@ -135,33 +142,38 @@ export function getWeeklyBracket(snacks: Snack[]): BracketMatch[] {
   return matches;
 }
 
-export async function listSnacks(client: Db, user: User, includeArchived = false): Promise<Snack[]> {
+export async function listSnacks(client: Db, user: User, includeArchived = false): Promise<{ snacks: Snack[]; bracketVotes: BracketVote[] }> {
   let snacksQuery = client.from("snacks").select("*").order("created_at", { ascending: false });
   if (!includeArchived) snacksQuery = snacksQuery.eq("archived", false);
 
-  const [snacksResult, votesResult, commentsResult, ratingsResult] = await Promise.all([
+  const [snacksResult, votesResult, commentsResult, ratingsResult, bracketVotesResult] = await Promise.all([
     snacksQuery,
     client.from("snack_votes").select("*"),
     client.from("snack_comments").select("*").eq("deleted", false).order("created_at", { ascending: true }),
     client.from("snack_ratings").select("snack_id,rating").eq("user_id", user.id),
+    client.from("bracket_votes").select("week_key,match_key,snack_id,user_id").eq("week_key", getWeekKey()),
   ]);
 
   if (snacksResult.error) throw snacksResult.error;
   if (votesResult.error) throw votesResult.error;
   if (commentsResult.error) throw commentsResult.error;
   if (ratingsResult.error) throw ratingsResult.error;
+  if (bracketVotesResult.error) throw bracketVotesResult.error;
 
   const votes = (votesResult.data ?? []) as Array<{ snack_id: string; user_id: string; value: number }>;
   const comments = (commentsResult.data ?? []) as SnackComment[];
   const ratings = (ratingsResult.data ?? []) as Array<{ snack_id: string; rating: number }>;
 
-  return ((snacksResult.data ?? []) as Snack[]).map((snack) => ({
-    ...snack,
-    score: votes.filter((vote) => vote.snack_id === snack.id).reduce((sum, vote) => sum + vote.value, 0),
-    user_vote: votes.find((vote) => vote.snack_id === snack.id && vote.user_id === user.id)?.value ?? 0,
-    personal_rating: ratings.find((rating) => rating.snack_id === snack.id)?.rating,
-    comments: comments.filter((comment) => comment.snack_id === snack.id),
-  }));
+  return {
+    snacks: ((snacksResult.data ?? []) as Snack[]).map((snack) => ({
+      ...snack,
+      score: votes.filter((vote) => vote.snack_id === snack.id).reduce((sum, vote) => sum + vote.value, 0),
+      user_vote: votes.find((vote) => vote.snack_id === snack.id && vote.user_id === user.id)?.value ?? 0,
+      personal_rating: ratings.find((rating) => rating.snack_id === snack.id)?.rating,
+      comments: comments.filter((comment) => comment.snack_id === snack.id),
+    })),
+    bracketVotes: (bracketVotesResult.data ?? []) as BracketVote[],
+  };
 }
 
 export async function createSnack(
@@ -240,6 +252,16 @@ export async function setRating(client: Db, snackId: string, user: User, rating:
     .upsert(
       { snack_id: snackId, user_id: user.id, rating, updated_at: new Date().toISOString() },
       { onConflict: "snack_id,user_id" },
+    );
+  if (result.error) throw result.error;
+}
+
+export async function setBracketVote(client: Db, weekKey: string, matchKey: string, snackId: string, user: User) {
+  const result = await client
+    .from("bracket_votes")
+    .upsert(
+      { week_key: weekKey, match_key: matchKey, snack_id: snackId, user_id: user.id, updated_at: new Date().toISOString() },
+      { onConflict: "week_key,match_key,user_id" },
     );
   if (result.error) throw result.error;
 }

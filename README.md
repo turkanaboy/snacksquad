@@ -29,3 +29,5 @@ npm run dev
 V1 does not include Slack integration, user-facing login, Storage uploads, Realtime, product lookup APIs, purchasing, stocking, approval workflows, or role-based moderation.
 
 Never put a Supabase service-role or secret key in `.env.local` for this browser app.
+
+Magic-link prep lives in `docs/auth-setup.md`; the email template is `docs/magic-link-email.html`.

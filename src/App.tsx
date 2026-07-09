@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { hasSupabaseConfig, supabase } from "./supabaseClient";
 import { friendlyError } from "./errors";
+import { searchSnackMetadata } from "./snackMetadata";
 import {
   addComment,
   archiveSnack,
@@ -13,6 +14,7 @@ import {
   getWeeklyBracket,
   listSnacks,
   pickSnackOfTheDay,
+  setBracketVote,
   setRating,
   setVote,
   snacksToCsv,
@@ -20,6 +22,7 @@ import {
   type Snack,
   type SnackComment,
   type SnackInput,
+  type BracketVote,
 } from "./snackStore";
 import { ensureAnonymousProfile, saveDisplayName, saveProfile, type Profile } from "./profile";
 
@@ -30,6 +33,7 @@ const exampleSnack = {
   note: "A safe first nomination: salty, snackable, and meeting-friendly.",
 };
 const bracketVoteKey = `snack-squad-bracket-${getWeekKey()}`;
+const weekKey = getWeekKey();
 
 export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -39,8 +43,10 @@ export default function App() {
   const [comments, setComments] = useState<Record<string, string>>({});
   const [editingSnack, setEditingSnack] = useState<string | null>(null);
   const [message, setMessage] = useState("Loading Snack Squad...");
+  const [metadataMessage, setMetadataMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [sharedBracketVotes, setSharedBracketVotes] = useState<BracketVote[]>([]);
   const [bracketVotes, setBracketVotes] = useState<Record<string, string>>(() => {
     try {
       return JSON.parse(localStorage.getItem(bracketVoteKey) || "{}") as Record<string, string>;
@@ -71,8 +77,9 @@ export default function App() {
 
   async function refresh(currentProfile = profile) {
     if (!supabase || !currentProfile) return;
-    const nextSnacks = await listSnacks(supabase, currentProfile.user, showArchived);
-    setSnacks(nextSnacks);
+    const result = await listSnacks(supabase, currentProfile.user, showArchived);
+    setSnacks(result.snacks);
+    setSharedBracketVotes(result.bracketVotes);
   }
 
   useEffect(() => {
@@ -105,6 +112,25 @@ export default function App() {
 
   function updateDraft(key: keyof SnackInput, value: string) {
     setSnackDraft((draft) => ({ ...draft, [key]: value }));
+  }
+
+  async function fillMetadata() {
+    await run(async () => {
+      setMetadataMessage("");
+      const [match] = await searchSnackMetadata(snackDraft.name);
+      if (!match) {
+        setMetadataMessage("No snack metadata match yet.");
+        return;
+      }
+      setSnackDraft((draft) => ({
+        ...draft,
+        name: match.name || draft.name,
+        category: match.category || match.brand || draft.category,
+        imageUrl: match.imageUrl || draft.imageUrl,
+        sourceNote: match.sourceUrl ? `Open Food Facts: ${match.sourceUrl}` : draft.sourceNote,
+      }));
+      setMetadataMessage("Snack metadata filled. Review before saving.");
+    });
   }
 
   async function submitSnack(event: FormEvent) {
@@ -208,10 +234,16 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  function voteBracket(matchKey: string, snackId: string) {
+  async function voteBracket(matchKey: string, snackId: string) {
     const nextVotes = { ...bracketVotes, [matchKey]: snackId };
     setBracketVotes(nextVotes);
     localStorage.setItem(bracketVoteKey, JSON.stringify(nextVotes));
+    if (!supabase || !profile) return;
+    const client = supabase;
+    await run(async () => {
+      await setBracketVote(client, weekKey, matchKey, snackId, profile.user);
+      await refresh();
+    });
   }
 
   useEffect(() => {
@@ -262,6 +294,10 @@ export default function App() {
               placeholder="Crunchy, sweet, spicy..."
             />
           </label>
+          <button type="button" className="ghost" onClick={fillMetadata} disabled={!snackDraft.name || busy}>
+            Find snack info
+          </button>
+          {metadataMessage ? <p className="source-note">{metadataMessage}</p> : null}
           <label>
             Image URL
             <input
@@ -355,7 +391,7 @@ export default function App() {
                         className={votedFor === snack.id ? "bracket-pick" : "ghost"}
                         onClick={() => voteBracket(matchKey, snack.id)}
                       >
-                        {snack.name}
+                        {snack.name} ({sharedBracketVotes.filter((vote) => vote.match_key === matchKey && vote.snack_id === snack.id).length})
                       </button>
                     ))}
                     {!match.right ? <span>Match {index + 1}: bye week</span> : null}
