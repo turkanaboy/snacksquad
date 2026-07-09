@@ -8,20 +8,20 @@
 
 - [x] Add an empty-state example snack suggestion.
 - [x] Show clearer errors for missing Supabase config vs hosted auth/config failures.
-- [ ] Add a small "copied from Slack" source note field only if people actually want it.
+- [ ] Add a small "copied from Slack" source note field after users ask for source tracking.
 - [ ] Add basic mobile spacing pass after the first real team test.
 
 ## Slack Loop
 
-- [ ] Post a Slack message when a new snack is suggested.
-- [ ] Add a Slack slash command or shortcut for submitting a snack.
+- [ ] Post a Slack message when a new snack is suggested after Slack app credentials exist.
+- [ ] Add a Slack slash command or shortcut for submitting a snack after Slack app credentials exist.
 - [ ] Consider Slack sign-in only if anonymous sessions become confusing across devices.
 
 ## Snack Metadata
 
 - [x] Add optional image URL preview validation.
 - [x] Add simple duplicate suggestions beyond exact normalized names.
-- [ ] Revisit product/snack lookup APIs after real duplicates become annoying.
+- [ ] Revisit Open Food Facts lookup after API access is approved and real duplicates become annoying.
 
 ## Culture Features
 
@@ -34,6 +34,6 @@
 
 ## Admin
 
-- [ ] Add a lightweight moderator cleanup path.
+- [ ] Add a lightweight moderator cleanup path only after choosing a real admin identity model.
 - [x] Add an archive view for old snacks.
 - [x] Add export to CSV if the snack board becomes useful history.

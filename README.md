@@ -18,10 +18,14 @@ npm run build
 npm run dev
 ```
 
-## MVP Guardrails
+## Current Features
 
-V1 includes the shared snack board, anonymous session ownership, typed display names, suggestions, duplicate nudges, votes, comments, and author-owned cleanup.
+- Shared snack board with anonymous session ownership and typed display names.
+- Snack suggestions, duplicate nudges, votes, comments, and author-owned cleanup.
+- Image URL previews, pick of the day, weekly local bracket voting, personal ratings, derived badges, archive view, and CSV export.
 
-V1 does not include Slack integration, user-facing login, Storage uploads, Realtime, product lookup APIs, brackets, badges, personal snack logs, purchasing, stocking, or approval workflows.
+## Guardrails
+
+V1 does not include Slack integration, user-facing login, Storage uploads, Realtime, product lookup APIs, purchasing, stocking, approval workflows, or role-based moderation.
 
 Never put a Supabase service-role or secret key in `.env.local` for this browser app.
