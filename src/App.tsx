@@ -8,6 +8,7 @@ import {
   deleteComment,
   findExactDuplicate,
   findSimilarDuplicates,
+  getSnackBadges,
   listSnacks,
   pickSnackOfTheDay,
   setRating,
@@ -45,6 +46,7 @@ export default function App() {
   );
   const pickOfTheDay = useMemo(() => pickSnackOfTheDay(snacks), [snacks]);
   const ratedSnacks = useMemo(() => snacks.filter((snack) => snack.personal_rating), [snacks]);
+  const badges = useMemo(() => getSnackBadges(snacks), [snacks]);
   const imagePreview = useMemo(() => {
     const imageUrl = snackDraft.imageUrl ?? "";
     if (!imageUrl.trim()) return null;
@@ -300,6 +302,17 @@ export default function App() {
               <h3>{pickOfTheDay.name}</h3>
               <p>{pickOfTheDay.category || "Snack"} by {pickOfTheDay.display_name}</p>
             </article>
+          ) : null}
+          {badges.length > 0 ? (
+            <section className="pick-card badge-list">
+              <p className="eyebrow">Badges</p>
+              {badges.map((badge) => (
+                <p key={badge.label} className="log-row">
+                  <span>{badge.label}</span>
+                  <b>{badge.snack.name}</b>
+                </p>
+              ))}
+            </section>
           ) : null}
           {ratedSnacks.length > 0 ? (
             <section className="pick-card">

@@ -4,6 +4,7 @@ import {
   cleanText,
   findExactDuplicate,
   findSimilarDuplicates,
+  getSnackBadges,
   normalizeSnackName,
   pickSnackOfTheDay,
   snacksToCsv,
@@ -35,5 +36,17 @@ const csvSnack = {
   image_url: "",
 } as Snack;
 assert.match(snacksToCsv([csvSnack]), /"Has ""snap"""/);
+
+const badgeSnack = {
+  ...csvSnack,
+  archived: false,
+  comments: [{ id: "1" } as never],
+  personal_rating: 5,
+} as Snack;
+assert.deepEqual(getSnackBadges([badgeSnack]).map((badge) => badge.label), [
+  "Crowd favorite",
+  "Most debated",
+  "My favorite",
+]);
 
 console.log("snack store tests passed");

@@ -29,8 +29,8 @@
 - [ ] Weekly bracket nominations.
 - [ ] Weekly bracket voting.
 - [x] Personal snack rating log.
-- [ ] Badge/superlative definitions.
-- [ ] Badge awarding UI.
+- [x] Badge/superlative definitions.
+- [x] Badge awarding UI.
 
 ## Admin
 

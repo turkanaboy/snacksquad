@@ -88,6 +88,27 @@ export function snacksToCsv(snacks: Snack[]): string {
   return rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n");
 }
 
+export type SnackBadge = {
+  label: string;
+  snack: Snack;
+};
+
+export function getSnackBadges(snacks: Snack[]): SnackBadge[] {
+  const active = snacks.filter((snack) => !snack.archived);
+  if (active.length === 0) return [];
+
+  const badges: SnackBadge[] = [];
+  const topVoted = [...active].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
+  const mostDiscussed = [...active].sort((a, b) => (b.comments?.length ?? 0) - (a.comments?.length ?? 0))[0];
+  const personalFavorite = [...active].filter((snack) => snack.personal_rating).sort((a, b) => (b.personal_rating ?? 0) - (a.personal_rating ?? 0))[0];
+
+  if ((topVoted.score ?? 0) > 0) badges.push({ label: "Crowd favorite", snack: topVoted });
+  if ((mostDiscussed.comments?.length ?? 0) > 0) badges.push({ label: "Most debated", snack: mostDiscussed });
+  if (personalFavorite) badges.push({ label: "My favorite", snack: personalFavorite });
+
+  return badges;
+}
+
 export async function listSnacks(client: Db, user: User, includeArchived = false): Promise<Snack[]> {
   let snacksQuery = client.from("snacks").select("*").order("created_at", { ascending: false });
   if (!includeArchived) snacksQuery = snacksQuery.eq("archived", false);

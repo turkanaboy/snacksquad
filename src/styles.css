@@ -172,6 +172,10 @@ h2 {
   justify-content: space-between;
 }
 
+.badge-list b {
+  text-align: right;
+}
+
 .rating-row select {
   width: 90px;
 }
