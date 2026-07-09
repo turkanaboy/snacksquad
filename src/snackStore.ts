@@ -15,6 +15,7 @@ export type Snack = {
   score?: number;
   comments?: SnackComment[];
   user_vote?: number;
+  personal_rating?: number;
 };
 
 export type SnackComment = {
@@ -91,23 +92,27 @@ export async function listSnacks(client: Db, user: User, includeArchived = false
   let snacksQuery = client.from("snacks").select("*").order("created_at", { ascending: false });
   if (!includeArchived) snacksQuery = snacksQuery.eq("archived", false);
 
-  const [snacksResult, votesResult, commentsResult] = await Promise.all([
+  const [snacksResult, votesResult, commentsResult, ratingsResult] = await Promise.all([
     snacksQuery,
     client.from("snack_votes").select("*"),
     client.from("snack_comments").select("*").eq("deleted", false).order("created_at", { ascending: true }),
+    client.from("snack_ratings").select("snack_id,rating").eq("user_id", user.id),
   ]);
 
   if (snacksResult.error) throw snacksResult.error;
   if (votesResult.error) throw votesResult.error;
   if (commentsResult.error) throw commentsResult.error;
+  if (ratingsResult.error) throw ratingsResult.error;
 
   const votes = (votesResult.data ?? []) as Array<{ snack_id: string; user_id: string; value: number }>;
   const comments = (commentsResult.data ?? []) as SnackComment[];
+  const ratings = (ratingsResult.data ?? []) as Array<{ snack_id: string; rating: number }>;
 
   return ((snacksResult.data ?? []) as Snack[]).map((snack) => ({
     ...snack,
     score: votes.filter((vote) => vote.snack_id === snack.id).reduce((sum, vote) => sum + vote.value, 0),
     user_vote: votes.find((vote) => vote.snack_id === snack.id && vote.user_id === user.id)?.value ?? 0,
+    personal_rating: ratings.find((rating) => rating.snack_id === snack.id)?.rating,
     comments: comments.filter((comment) => comment.snack_id === snack.id),
   }));
 }
@@ -175,6 +180,16 @@ export async function setVote(client: Db, snackId: string, user: User, value: nu
     .from("snack_votes")
     .upsert(
       { snack_id: snackId, user_id: user.id, value, updated_at: new Date().toISOString() },
+      { onConflict: "snack_id,user_id" },
+    );
+  if (result.error) throw result.error;
+}
+
+export async function setRating(client: Db, snackId: string, user: User, rating: number) {
+  const result = await client
+    .from("snack_ratings")
+    .upsert(
+      { snack_id: snackId, user_id: user.id, rating, updated_at: new Date().toISOString() },
       { onConflict: "snack_id,user_id" },
     );
   if (result.error) throw result.error;

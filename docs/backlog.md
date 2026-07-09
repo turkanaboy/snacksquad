@@ -28,7 +28,7 @@
 - [x] Pick of the day.
 - [ ] Weekly bracket nominations.
 - [ ] Weekly bracket voting.
-- [ ] Personal snack rating log.
+- [x] Personal snack rating log.
 - [ ] Badge/superlative definitions.
 - [ ] Badge awarding UI.
 

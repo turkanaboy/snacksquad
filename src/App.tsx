@@ -10,6 +10,7 @@ import {
   findSimilarDuplicates,
   listSnacks,
   pickSnackOfTheDay,
+  setRating,
   setVote,
   snacksToCsv,
   updateSnack,
@@ -43,6 +44,7 @@ export default function App() {
     [duplicate?.id, editingSnack, snackDraft.name, snacks],
   );
   const pickOfTheDay = useMemo(() => pickSnackOfTheDay(snacks), [snacks]);
+  const ratedSnacks = useMemo(() => snacks.filter((snack) => snack.personal_rating), [snacks]);
   const imagePreview = useMemo(() => {
     const imageUrl = snackDraft.imageUrl ?? "";
     if (!imageUrl.trim()) return null;
@@ -141,6 +143,15 @@ export default function App() {
     const client = supabase;
     await run(async () => {
       await setVote(client, snack.id, profile.user, 1);
+      await refresh();
+    });
+  }
+
+  async function rateSnack(snack: Snack, rating: number) {
+    if (!supabase || !profile) return;
+    const client = supabase;
+    await run(async () => {
+      await setRating(client, snack.id, profile.user, rating);
       await refresh();
     });
   }
@@ -290,6 +301,17 @@ export default function App() {
               <p>{pickOfTheDay.category || "Snack"} by {pickOfTheDay.display_name}</p>
             </article>
           ) : null}
+          {ratedSnacks.length > 0 ? (
+            <section className="pick-card">
+              <p className="eyebrow">My snack log</p>
+              {ratedSnacks.map((snack) => (
+                <p key={snack.id} className="log-row">
+                  <span>{snack.name}</span>
+                  <b>{snack.personal_rating}/5</b>
+                </p>
+              ))}
+            </section>
+          ) : null}
           {snacks.length === 0 ? (
             <article className="snack-card example-card">
               <div className="snack-image">?</div>
@@ -341,6 +363,21 @@ export default function App() {
                           </>
                         ) : null}
                       </div>
+                      <label className="rating-row">
+                        My rating
+                        <select
+                          value={snack.personal_rating ?? ""}
+                          onChange={(event) => rateSnack(snack, Number(event.target.value))}
+                          disabled={!profile || busy}
+                        >
+                          <option value="" disabled>Rate</option>
+                          <option value="1">1</option>
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                          <option value="4">4</option>
+                          <option value="5">5</option>
+                        </select>
+                      </label>
                       <form className="comment-form" onSubmit={(event) => submitComment(event, snack)}>
                         <input
                           value={comments[snack.id] || ""}

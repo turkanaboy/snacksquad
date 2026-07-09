@@ -14,6 +14,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -34,6 +35,7 @@ button:disabled {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid #c9c2b8;
@@ -162,6 +164,18 @@ h2 {
   margin-bottom: 6px;
 }
 
+.log-row,
+.rating-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rating-row select {
+  width: 90px;
+}
+
 .snack-card {
   display: grid;
   grid-template-columns: 132px 1fr;
@@ -257,6 +271,7 @@ h2 {
 
   .comment-form,
   .profile div,
+  .rating-row,
   .actions {
     align-items: stretch;
     flex-direction: column;
