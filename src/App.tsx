@@ -7,6 +7,7 @@ import {
   createSnack,
   deleteComment,
   findExactDuplicate,
+  findSimilarDuplicates,
   listSnacks,
   setVote,
   updateSnack,
@@ -34,6 +35,20 @@ export default function App() {
   const [busy, setBusy] = useState(false);
 
   const duplicate = useMemo(() => findExactDuplicate(snacks, snackDraft.name), [snacks, snackDraft.name]);
+  const similarSnacks = useMemo(
+    () => findSimilarDuplicates(snacks, snackDraft.name).filter((snack) => snack.id !== editingSnack && snack.id !== duplicate?.id),
+    [duplicate?.id, editingSnack, snackDraft.name, snacks],
+  );
+  const imagePreview = useMemo(() => {
+    const imageUrl = snackDraft.imageUrl ?? "";
+    if (!imageUrl.trim()) return null;
+    try {
+      const url = new URL(imageUrl);
+      return ["http:", "https:"].includes(url.protocol) ? url.toString() : null;
+    } catch {
+      return null;
+    }
+  }, [snackDraft.imageUrl]);
 
   async function refresh(currentProfile = profile) {
     if (!supabase || !currentProfile) return;
@@ -208,6 +223,8 @@ export default function App() {
               placeholder="https://..."
             />
           </label>
+          {snackDraft.imageUrl && !imagePreview ? <p className="duplicate">Use a full http or https image URL.</p> : null}
+          {imagePreview ? <img className="image-preview" src={imagePreview} alt="" /> : null}
           <label>
             Pitch
             <textarea
@@ -218,6 +235,11 @@ export default function App() {
           </label>
           {duplicate && duplicate.id !== editingSnack ? (
             <p className="duplicate">Looks like "{duplicate.name}" is already on the board.</p>
+          ) : null}
+          {!duplicate && similarSnacks.length > 0 ? (
+            <p className="duplicate">
+              Similar snacks: {similarSnacks.map((snack) => snack.name).join(", ")}
+            </p>
           ) : null}
           <div className="actions">
             <button disabled={!profile || !hasSupabaseConfig || busy}>{editingSnack ? "Save snack" : "Add snack"}</button>

@@ -46,9 +46,23 @@ export function cleanText(value?: string): string | null {
   return cleaned ? cleaned : null;
 }
 
+export function cleanImageUrl(value?: string): string | null {
+  const cleaned = cleanText(value);
+  if (!cleaned) return null;
+  const url = new URL(cleaned);
+  if (!["http:", "https:"].includes(url.protocol)) throw new Error("Image URL must start with http:// or https://.");
+  return url.toString();
+}
+
 export function findExactDuplicate<T extends { normalized_name: string }>(snacks: T[], name: string): T | null {
   const normalized = normalizeSnackName(name);
   return snacks.find((snack) => snack.normalized_name === normalized) ?? null;
+}
+
+export function findSimilarDuplicates<T extends { normalized_name: string }>(snacks: T[], name: string): T[] {
+  const words = normalizeSnackName(name).split(" ").filter((word) => word.length > 2);
+  if (words.length === 0) return [];
+  return snacks.filter((snack) => words.some((word) => snack.normalized_name.includes(word))).slice(0, 3);
 }
 
 export async function listSnacks(client: Db, user: User): Promise<Snack[]> {
@@ -87,7 +101,7 @@ export async function createSnack(
     normalized_name: normalizeSnackName(name),
     category: cleanText(input.category),
     note: cleanText(input.note),
-    image_url: cleanText(input.imageUrl),
+    image_url: cleanImageUrl(input.imageUrl),
     created_by: user.id,
     display_name: displayName,
   };
@@ -112,7 +126,7 @@ export async function updateSnack(
       normalized_name: normalizeSnackName(name),
       category: cleanText(input.category),
       note: cleanText(input.note),
-      image_url: cleanText(input.imageUrl),
+      image_url: cleanImageUrl(input.imageUrl),
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)

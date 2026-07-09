@@ -19,8 +19,8 @@
 
 ## Snack Metadata
 
-- [ ] Add optional image URL preview validation.
-- [ ] Add simple duplicate suggestions beyond exact normalized names.
+- [x] Add optional image URL preview validation.
+- [x] Add simple duplicate suggestions beyond exact normalized names.
 - [ ] Revisit product/snack lookup APIs after real duplicates become annoying.
 
 ## Culture Features
