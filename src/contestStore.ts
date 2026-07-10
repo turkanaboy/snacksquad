@@ -6,6 +6,7 @@ export type ContestWeek = {
   status: string;
   nominationClosesAt: string;
   resultsPublishAt: string;
+  championEntryId: string | null;
 };
 
 export type ContestEntry = {
@@ -13,6 +14,9 @@ export type ContestEntry = {
   snackId: string;
   seed: number | null;
   ownerIds: string[];
+  snackName: string;
+  category: string;
+  imageUrl: string | null;
 };
 
 export type ContestMatchup = {
@@ -24,6 +28,8 @@ export type ContestMatchup = {
   winnerEntryId: string | null;
   status: string;
   closesAt: string;
+  leftVoteCount: number;
+  rightVoteCount: number;
 };
 
 export type ContestOverview = {
@@ -40,8 +46,16 @@ type RawOverview = {
     status: string;
     nomination_closes_at: string;
     results_publish_at: string;
+    champion_entry_id: string | null;
   } | null;
-  entries?: Array<{ id: string; snack_id: string; seed: number | null }>;
+  entries?: Array<{
+    id: string;
+    snack_id: string;
+    seed: number | null;
+    snack_name: string;
+    category: string;
+    image_url: string | null;
+  }>;
   owners?: Array<{ entry_id: string; user_id: string }>;
   matchups?: Array<{
     id: string;
@@ -52,6 +66,8 @@ type RawOverview = {
     winner_entry_id: string | null;
     status: string;
     closes_at: string;
+    left_vote_count?: number;
+    right_vote_count?: number;
   }>;
   viewerVotes?: Array<{ matchup_id: string; entry_id: string }>;
 };
@@ -68,12 +84,16 @@ export function mapContestOverview(value: unknown): ContestOverview | null {
       status: raw.week.status,
       nominationClosesAt: raw.week.nomination_closes_at,
       resultsPublishAt: raw.week.results_publish_at,
+      championEntryId: raw.week.champion_entry_id || null,
     },
     entries: (raw.entries || []).map((entry) => ({
       id: entry.id,
       snackId: entry.snack_id,
       seed: entry.seed,
       ownerIds: owners.filter((owner) => owner.entry_id === entry.id).map((owner) => owner.user_id),
+      snackName: entry.snack_name,
+      category: entry.category,
+      imageUrl: entry.image_url,
     })),
     matchups: (raw.matchups || []).map((matchup) => ({
       id: matchup.id,
@@ -84,6 +104,8 @@ export function mapContestOverview(value: unknown): ContestOverview | null {
       winnerEntryId: matchup.winner_entry_id,
       status: matchup.status,
       closesAt: matchup.closes_at,
+      leftVoteCount: Number(matchup.left_vote_count || 0),
+      rightVoteCount: Number(matchup.right_vote_count || 0),
     })),
     viewerVotes: (raw.viewerVotes || []).map((vote) => ({
       matchupId: vote.matchup_id,
@@ -114,4 +136,56 @@ export async function nominateBracketSnack(client: RpcClient, weekId: string, sn
 export async function castBracketVote(client: RpcClient, matchupId: string, entryId: string): Promise<void> {
   const result = await client.rpc("cast_bracket_vote", { p_matchup_id: matchupId, p_entry_id: entryId });
   if (result.error) throw result.error;
+}
+
+export type WeeklyReport = {
+  weekId: string;
+  reportDate: string;
+  publishedAt: string;
+  topSnackId: string | null;
+  nutritionSnackId: string | null;
+  bracketChampionEntryId: string | null;
+  leaderboard: Array<{ snackId: string; snackName: string; logCount: number; upvoteCount: number }>;
+};
+
+export type BadgeTenure = { key: string; label: string; startDate: string; endDate: string | null };
+
+export async function getWeeklyReports(client: RpcClient, limit = 8): Promise<WeeklyReport[]> {
+  const result = await client.rpc("weekly_report_feed", { p_limit: limit });
+  if (result.error) throw result.error;
+  return (result.data || []).map((row: {
+    week_id: string;
+    report_date: string;
+    published_at: string;
+    payload?: {
+      topSnackId?: string | null;
+      nutritionSnackId?: string | null;
+      bracketChampionEntryId?: string | null;
+      leaderboard?: Array<{ snack_id: string; snack_name: string; log_count: number; upvote_count: number }>;
+    };
+  }) => ({
+    weekId: row.week_id,
+    reportDate: row.report_date,
+    publishedAt: row.published_at,
+    topSnackId: row.payload?.topSnackId || null,
+    nutritionSnackId: row.payload?.nutritionSnackId || null,
+    bracketChampionEntryId: row.payload?.bracketChampionEntryId || null,
+    leaderboard: (row.payload?.leaderboard || []).map((item) => ({
+      snackId: item.snack_id,
+      snackName: item.snack_name,
+      logCount: Number(item.log_count),
+      upvoteCount: Number(item.upvote_count),
+    })),
+  }));
+}
+
+export async function getProfileBadges(client: RpcClient, userId: string): Promise<BadgeTenure[]> {
+  const result = await client.rpc("profile_badges", { p_user_id: userId });
+  if (result.error) throw result.error;
+  return (result.data || []).map((row: { badge_key: string; label: string; start_date: string; end_date: string | null }) => ({
+    key: row.badge_key,
+    label: row.label,
+    startDate: row.start_date,
+    endDate: row.end_date,
+  }));
 }

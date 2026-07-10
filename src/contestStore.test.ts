@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { castBracketVote, getContestOverview, mapContestOverview, nominateBracketSnack } from "./contestStore";
+import {
+  castBracketVote, getContestOverview, getProfileBadges, getWeeklyReports,
+  mapContestOverview, nominateBracketSnack,
+} from "./contestStore";
 
 const raw = {
   week: {
@@ -8,8 +11,9 @@ const raw = {
     status: "quarterfinals",
     nomination_closes_at: "2026-07-13T13:00:00Z",
     results_publish_at: "2026-07-17T13:00:00Z",
+    champion_entry_id: null,
   },
-  entries: [{ id: "entry-1", snack_id: "snack-1", seed: 1 }],
+  entries: [{ id: "entry-1", snack_id: "snack-1", seed: 1, snack_name: "Pretzels", category: "Grains/Bakery", image_url: null }],
   owners: [{ entry_id: "entry-1", user_id: "user-1" }],
   matchups: [{
     id: "match-1",
@@ -20,6 +24,8 @@ const raw = {
     winner_entry_id: null,
     status: "open",
     closes_at: "2026-07-14T21:00:00Z",
+    left_vote_count: 4,
+    right_vote_count: 3,
   }],
   viewerVotes: [{ matchup_id: "match-1", entry_id: "entry-1" }],
 };
@@ -31,8 +37,12 @@ assert.deepEqual(mapContestOverview(raw), {
     status: "quarterfinals",
     nominationClosesAt: "2026-07-13T13:00:00Z",
     resultsPublishAt: "2026-07-17T13:00:00Z",
+    championEntryId: null,
   },
-  entries: [{ id: "entry-1", snackId: "snack-1", seed: 1, ownerIds: ["user-1"] }],
+  entries: [{
+    id: "entry-1", snackId: "snack-1", seed: 1, ownerIds: ["user-1"],
+    snackName: "Pretzels", category: "Grains/Bakery", imageUrl: null,
+  }],
   matchups: [{
     id: "match-1",
     roundNumber: 2,
@@ -42,6 +52,8 @@ assert.deepEqual(mapContestOverview(raw), {
     winnerEntryId: null,
     status: "open",
     closesAt: "2026-07-14T21:00:00Z",
+    leftVoteCount: 4,
+    rightVoteCount: 3,
   }],
   viewerVotes: [{ matchupId: "match-1", entryId: "entry-1" }],
 });
@@ -51,6 +63,11 @@ const client = {
   rpc: async (name: string, params: unknown) => {
     rpcCalls.push({ name, params });
     if (name === "contest_overview") return { data: raw, error: null };
+    if (name === "weekly_report_feed") return { data: [{
+      week_id: "week-1", report_date: "2026-07-17", published_at: "2026-07-17T13:00:00Z",
+      payload: { leaderboard: [{ snack_id: "snack-1", snack_name: "Pretzels", log_count: 5, upvote_count: 8 }] },
+    }], error: null };
+    if (name === "profile_badges") return { data: [{ badge_key: "top-snack", label: "Top Snack", start_date: "2026-07-17", end_date: null }], error: null };
     return { data: null, error: null };
   },
 };
@@ -58,10 +75,14 @@ const client = {
 assert.equal((await getContestOverview(client as never, "week-1"))?.week.id, "week-1");
 await nominateBracketSnack(client as never, "week-1", "snack-1");
 await castBracketVote(client as never, "match-1", "entry-1");
+assert.equal((await getWeeklyReports(client as never, 4))[0].leaderboard[0].upvoteCount, 8);
+assert.equal((await getProfileBadges(client as never, "user-1"))[0].label, "Top Snack");
 assert.deepEqual(rpcCalls, [
   { name: "contest_overview", params: { p_week_id: "week-1" } },
   { name: "nominate_bracket_snack", params: { p_week_id: "week-1", p_snack_id: "snack-1" } },
   { name: "cast_bracket_vote", params: { p_matchup_id: "match-1", p_entry_id: "entry-1" } },
+  { name: "weekly_report_feed", params: { p_limit: 4 } },
+  { name: "profile_badges", params: { p_user_id: "user-1" } },
 ]);
 
 assert.equal(mapContestOverview(null), null);

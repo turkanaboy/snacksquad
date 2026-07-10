@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { BadgeHistory } from "../components/BadgeHistory";
 import type { LeaderboardItem, MySnackLog } from "../snackStore";
 import { getMySnackLogs, removeSnackLog } from "../snackStore";
 import type { Profile, PublicProfile } from "../profile";
@@ -65,7 +66,7 @@ export function ProfileScreen({
         </header>
         <dl className="profile-stats"><div><dt>Logs</dt><dd>{publicProfile.totalLogs}</dd></div><div><dt>Distinct snacks</dt><dd>{publicProfile.distinctSnacks}</dd></div></dl>
         <section className="profile-section"><h2>Category mix</h2>{Object.keys(publicProfile.categoryMix).length ? <ul className="plain-list">{Object.entries(publicProfile.categoryMix).map(([category, count]) => <li key={category}><span>{category}</span><b>{count}</b></li>)}</ul> : <p className="empty-state">No category history yet.</p>}</section>
-        <section className="profile-section"><h2>Badges</h2>{publicProfile.badges.length ? <ul className="badge-history">{publicProfile.badges.map((badge) => <li key={`${badge.key}-${badge.startDate}`}><span aria-hidden="true">★</span><div><b>{badge.label}</b><small>{badge.startDate}{badge.endDate ? ` – ${badge.endDate}` : " – Current"}</small></div></li>)}</ul> : <p className="empty-state">No badges yet.</p>}</section>
+        <section className="profile-section"><h2>Badges</h2><BadgeHistory badges={publicProfile.badges} emptyMessage="No badges yet." /></section>
       </div>
     );
   }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { AppShell, type AppView } from "./components/AppShell";
 import { AuthScreen } from "./screens/AuthScreen";
+import { ContestsScreen } from "./screens/ContestsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LogScreen } from "./screens/LogScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
@@ -189,7 +190,7 @@ export default function App() {
         />
       ) : null}
       {view === "contests" ? (
-        <section className="placeholder-screen"><p className="section-label">Weekly competition</p><h1>Contests are next.</h1><p>The bracket engine is live. Its full visual experience arrives in the next implementation unit.</p><button className="secondary-button" onClick={() => setView("home")}>Back home</button></section>
+        <ContestsScreen client={client} currentUserId={activeSession.user.id} />
       ) : null}
     </AppShell>
   );
