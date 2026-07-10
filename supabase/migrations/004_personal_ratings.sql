@@ -12,6 +12,10 @@ alter table public.snack_ratings enable row level security;
 grant select on public.snack_ratings to authenticated;
 grant insert, update on public.snack_ratings to authenticated;
 
+drop policy if exists "ratings read own" on public.snack_ratings;
+drop policy if exists "ratings upsert own" on public.snack_ratings;
+drop policy if exists "ratings update own" on public.snack_ratings;
+
 create policy "ratings read own" on public.snack_ratings
   for select to authenticated using ((select auth.uid()) = user_id);
 

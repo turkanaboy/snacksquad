@@ -13,6 +13,10 @@ alter table public.bracket_votes enable row level security;
 grant select on public.bracket_votes to anon, authenticated;
 grant insert, update on public.bracket_votes to authenticated;
 
+drop policy if exists "bracket votes readable" on public.bracket_votes;
+drop policy if exists "bracket votes upsert own" on public.bracket_votes;
+drop policy if exists "bracket votes update own" on public.bracket_votes;
+
 create policy "bracket votes readable" on public.bracket_votes
   for select to anon, authenticated using (true);
 
