@@ -1,14 +1,196 @@
-import { hasSupabaseConfig } from "./supabaseClient";
+import { useCallback, useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { AppShell, type AppView } from "./components/AppShell";
+import { AuthScreen } from "./screens/AuthScreen";
+import { HomeScreen } from "./screens/HomeScreen";
+import { LogScreen } from "./screens/LogScreen";
+import { ProfileScreen } from "./screens/ProfileScreen";
+import { friendlyError } from "./errors";
+import {
+  loadMyProfile, loadPublicProfile, loadSession, observeSession, requestMagicLink,
+  signOut, updateMyProfile, type Profile, type PublicProfile,
+} from "./profile";
+import {
+  createManualSnack, createSnackLog, getBoard, getLeaderboard, setLogUpvote,
+  updateSnackLog, type BoardEntry, type LeaderboardItem, type MySnackLog,
+} from "./snackStore";
+import { saveSelectedSnack, submitSnackCorrection, type SnackMetadata } from "./snackMetadata";
+import { hasSupabaseConfig, supabase } from "./supabaseClient";
+
+function initialAuthError() {
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const search = new URLSearchParams(window.location.search);
+  const message = hash.get("error_description") || search.get("error_description");
+  return message ? friendlyError(new Error(message)) : "";
+}
 
 export default function App() {
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [view, setView] = useState<AppView>("home");
+  const [board, setBoard] = useState<BoardEntry[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [logQuery, setLogQuery] = useState("");
+  const [editingLog, setEditingLog] = useState<MySnackLog | null>(null);
+  const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null);
+
+  const refreshCore = useCallback(async () => {
+    if (!supabase) return;
+    setLoading(true);
+    try {
+      const [nextBoard, nextLeaderboard] = await Promise.all([getBoard(supabase), getLeaderboard(supabase)]);
+      setBoard(nextBoard);
+      setLeaderboard(nextLeaderboard);
+    } catch (error) {
+      setNotice(friendlyError(error));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    void loadSession(supabase).then(setSession).catch((error) => {
+      setNotice(friendlyError(error));
+      setSession(null);
+    });
+    return observeSession(supabase, setSession);
+  }, []);
+
+  useEffect(() => {
+    if (!supabase || !session) {
+      setProfile(null);
+      return;
+    }
+    void Promise.all([loadMyProfile(supabase), refreshCore()])
+      .then(([nextProfile]) => setProfile(nextProfile))
+      .catch((error) => setNotice(friendlyError(error)));
+  }, [session, refreshCore]);
+
+  if (!hasSupabaseConfig || !supabase) {
+    return <main className="config-page"><h1>Snack Squad</h1><p role="alert">Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to `.env.local`.</p></main>;
+  }
+  const client = supabase;
+
+  if (session === undefined) return <main className="loading-page"><p role="status">Opening Snack Squad…</p></main>;
+
+  if (!session) {
+    return <AuthScreen initialError={initialAuthError()} onRequestLink={(email) => requestMagicLink(client, email, window.location.origin)} />;
+  }
+
+  if (!profile) return <main className="loading-page"><p role="status">Loading your taste file…</p>{notice ? <p role="alert">{notice}</p> : null}</main>;
+  const activeSession = session;
+  const activeProfile = profile;
+
+  function openLog(query = "") {
+    setEditingLog(null);
+    setLogQuery(query);
+    setView("log");
+  }
+
+  async function logSnack(snack: SnackMetadata) {
+    const snackId = snack.id || await saveSelectedSnack(client, snack);
+    if (editingLog) await updateSnackLog(client, editingLog.id, snackId);
+    else await createSnackLog(client, snackId);
+    setEditingLog(null);
+    setNotice(editingLog ? "Today’s log was replaced." : `${snack.name} was logged.`);
+    await refreshCore();
+    setView("home");
+  }
+
+  async function logManual(name: string, category: string) {
+    const snackId = await createManualSnack(client, name, category);
+    await logSnack({ id: snackId, name, category });
+  }
+
+  async function toggleUpvote(entry: BoardEntry) {
+    if (entry.loggerId === activeSession.user.id) return;
+    const nextUpvoted = !entry.viewerUpvoted;
+    setBoard((current) => current.map((item) => item.id === entry.id ? {
+      ...item,
+      viewerUpvoted: nextUpvoted,
+      upvoteCount: item.upvoteCount + (nextUpvoted ? 1 : -1),
+    } : item));
+    try {
+      await setLogUpvote(client, entry.id, nextUpvoted);
+      const nextLeaderboard = await getLeaderboard(client);
+      setLeaderboard(nextLeaderboard);
+    } catch (error) {
+      setBoard((current) => current.map((item) => item.id === entry.id ? entry : item));
+      setNotice(friendlyError(error));
+    }
+  }
+
+  async function openCoworkerProfile(userId: string) {
+    if (userId === activeProfile.userId) {
+      setPublicProfile(null);
+    } else {
+      try {
+        setPublicProfile(await loadPublicProfile(client, userId));
+      } catch (error) {
+        setNotice(friendlyError(error));
+        return;
+      }
+    }
+    setView("profile");
+  }
+
+  function navigate(nextView: AppView) {
+    if (nextView === "log") openLog();
+    else {
+      if (nextView === "profile") setPublicProfile(null);
+      setView(nextView);
+    }
+  }
+
   return (
-    <main>
-      <h1>Snack Squad</h1>
-      <p role="status">
-        {hasSupabaseConfig
-          ? "Core services are connected. The approved interface is being assembled next."
-          : "Add the Supabase values to .env.local to connect Snack Squad."}
-      </p>
-    </main>
+    <AppShell
+      view={view}
+      displayName={activeProfile.displayName}
+      email={activeSession.user.email || "Company member"}
+      onNavigate={navigate}
+      onSignOut={() => void signOut(client)}
+    >
+      {notice ? <div className="global-notice" role="status"><span>{notice}</span><button className="text-button" onClick={() => setNotice("")}>Dismiss</button></div> : null}
+      {view === "home" ? (
+        <HomeScreen
+          board={board}
+          leaderboard={leaderboard}
+          currentUserId={activeSession.user.id}
+          loading={loading}
+          onSearch={openLog}
+          onUpvote={(entry) => void toggleUpvote(entry)}
+          onOpenProfile={(userId) => void openCoworkerProfile(userId)}
+          onOpenContests={() => setView("contests")}
+        />
+      ) : null}
+      {view === "log" ? (
+        <LogScreen
+          client={client}
+          initialQuery={logQuery}
+          replacing={Boolean(editingLog)}
+          onLog={logSnack}
+          onManualLog={logManual}
+          onSuggestCorrection={(snackId, name, reason) => submitSnackCorrection(client, snackId, { name }, reason)}
+        />
+      ) : null}
+      {view === "profile" ? (
+        <ProfileScreen
+          client={client}
+          profile={activeProfile}
+          publicProfile={publicProfile}
+          leaderboard={leaderboard}
+          onBackToMine={() => setPublicProfile(null)}
+          onUpdate={async (changes) => setProfile(await updateMyProfile(client, changes))}
+          onReplaceLog={(log) => { setEditingLog(log); setLogQuery(log.snackName); setView("log"); }}
+          onChanged={() => void refreshCore()}
+        />
+      ) : null}
+      {view === "contests" ? (
+        <section className="placeholder-screen"><p className="section-label">Weekly competition</p><h1>Contests are next.</h1><p>The bracket engine is live. Its full visual experience arrives in the next implementation unit.</p><button className="secondary-button" onClick={() => setView("home")}>Back home</button></section>
+      ) : null}
+    </AppShell>
   );
 }

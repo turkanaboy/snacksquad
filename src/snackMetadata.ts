@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type SnackMetadata = {
+  id?: string;
   name: string;
   brand?: string;
   category?: string;
@@ -10,6 +11,15 @@ export type SnackMetadata = {
   sourceUrl?: string;
   nutriScore?: string;
   nutritionComplete?: boolean;
+};
+
+export type SnackCorrection = {
+  id: string;
+  snackId: string;
+  proposedChanges: Record<string, unknown>;
+  reason: string;
+  status: string;
+  createdAt: string;
 };
 
 export type SnackSearchSource = {
@@ -144,12 +154,13 @@ export async function searchLocalSnacks(
   if (!normalized) return [];
   const result = await client
     .from("snacks")
-    .select("name,brand,barcode,category,source_categories,image_url,source_url,nutri_score,nutrition_complete")
+    .select("id,name,brand,barcode,category,source_categories,image_url,source_url,nutri_score,nutrition_complete")
     .ilike("normalized_name", `%${normalized}%`)
     .is("merged_into_id", null)
     .limit(8);
   if (result.error) throw result.error;
   return (result.data || []).map((row) => ({
+    id: row.id,
     name: row.name,
     ...(row.brand ? { brand: row.brand } : {}),
     ...(row.barcode ? { barcode: row.barcode } : {}),
@@ -172,4 +183,54 @@ export function createSupabaseSnackSearch(
     local: (query) => searchLocalSnacks(client, query),
     remote: (query) => searchSnackMetadata(client, query),
   }, onResults, delayMs, onError);
+}
+
+export async function submitSnackCorrection(
+  client: Pick<SupabaseClient, "auth" | "from">,
+  snackId: string,
+  proposedChanges: Record<string, unknown>,
+  reason: string,
+): Promise<void> {
+  const userResult = await client.auth.getUser();
+  if (userResult.error || !userResult.data.user) throw userResult.error || new Error("Authentication required.");
+  const result = await client.from("snack_corrections").insert({
+    snack_id: snackId,
+    suggested_by: userResult.data.user.id,
+    proposed_changes: proposedChanges,
+    reason: reason.trim(),
+  });
+  if (result.error) throw result.error;
+}
+
+export async function listSnackCorrections(client: Pick<SupabaseClient, "from">): Promise<SnackCorrection[]> {
+  const result = await client.from("snack_corrections")
+    .select("id,snack_id,proposed_changes,reason,status,created_at")
+    .order("created_at", { ascending: false });
+  if (result.error) throw result.error;
+  return (result.data || []).map((row) => ({
+    id: row.id,
+    snackId: row.snack_id,
+    proposedChanges: row.proposed_changes,
+    reason: row.reason,
+    status: row.status,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function reviewSnackCorrection(
+  client: Pick<SupabaseClient, "rpc">,
+  correctionId: string,
+  approve: boolean,
+): Promise<void> {
+  const result = await client.rpc("review_snack_correction", {
+    p_correction_id: correctionId,
+    p_approve: approve,
+  });
+  if (result.error) throw result.error;
+}
+
+export async function isModerator(client: Pick<SupabaseClient, "rpc">): Promise<boolean> {
+  const result = await client.rpc("is_moderator");
+  if (result.error) throw result.error;
+  return Boolean(result.data);
 }
