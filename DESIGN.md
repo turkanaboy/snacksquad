@@ -3,7 +3,7 @@ name: Snack Squad
 description: A collectible snack-culture board built for fast logging, social ranking, and lightweight office competition.
 ---
 
-<!-- SEED: resolve exact tokens through the approved Impeccable palette and high-fidelity mock gates before frontend implementation. -->
+<!-- Palette approved 2026-07-10. High-fidelity north-star approval remains required before frontend implementation. -->
 
 # Design System: Snack Squad
 
@@ -25,29 +25,33 @@ The approved direction combines Letterboxd-like social list energy, Panini-style
 
 ## Colors
 
-The palette is committed and high-contrast. Exact values remain unresolved until the dedicated Impeccable palette artifact is approved.
+The palette is committed and high-contrast. `docs/design/snack-squad-palette.png` is the approved palette artifact.
 
 ### Primary
 
-- **Squad Cobalt** (`[to be resolved during implementation]`): Carries major active surfaces, search emphasis, navigation selection, and bracket moments.
+- **Squad Cobalt** (`#1647E8`): Carries major active surfaces, search emphasis, navigation selection, and bracket moments.
 
 ### Secondary
 
-- **Action Yellow** (`[to be resolved during implementation]`): Reserved for primary actions, confirmed votes, and rare high-value feedback.
+- **Action Yellow** (`#FFE500`): Reserved for primary actions, confirmed votes, and rare high-value feedback.
 
 ### Tertiary
 
-- **Competition Red** (`[to be resolved during implementation]`): Used sparingly for active contest tension, errors, and meaningful changes—not decoration.
+- **Competition Red** (`#FF4D45`): Used sparingly for active contest tension, errors, and meaningful changes—not decoration.
 
 ### Neutral
 
-- **Counter Black** (`[to be resolved during implementation]`): The primary shell and visual anchor; use a softened near-black rather than featureless pure black.
-- **Label White** (`[to be resolved during implementation]`): Primary text and bright task surfaces.
-- **Shelf Gray** (`[to be resolved during implementation]`): Dividers, secondary surfaces, inactive controls, and supporting text.
+- **Counter Black** (`#0B0D0F`): The primary shell and visual anchor.
+- **Board Black** (`#15191E`): Task surfaces that need separation from the shell without floating-card effects.
+- **Label White** (`#F4F6F2`): Primary text and bright task surfaces.
+- **Shelf Gray** (`#343A40`): Dividers and inactive controls.
+- **Receipt Gray** (`#A9B0B7`): Secondary text.
 
 **The Earned Accent Rule.** Cobalt identifies structure, yellow identifies action, and red identifies consequence. Never use all three merely to decorate one component.
 
 **The Office-Light Rule.** Every surface must remain legible in a bright workplace. Dark atmosphere never excuses low-contrast gray text.
+
+Approved WCAG contrast pairings: Label White on Counter Black (17.90:1), Label White on Squad Cobalt (6.23:1), Counter Black on Action Yellow (15.26:1), Counter Black on Competition Red (5.93:1), and Receipt Gray on Counter Black (8.88:1).
 
 ## Typography
 
