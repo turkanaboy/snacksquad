@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "tsx src/profile.test.ts && tsx src/snackStore.test.ts && tsx src/snackMetadata.test.ts && tsx supabase/functions/snack-metadata/product.test.ts && tsx supabase/functions/snack-metadata/index.test.ts"
+    "test": "tsx src/profile.test.ts && tsx src/snackStore.test.ts && tsx src/snackMetadata.test.ts && tsx src/contestStore.test.ts && tsx supabase/functions/snack-metadata/product.test.ts && tsx supabase/functions/snack-metadata/index.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",
