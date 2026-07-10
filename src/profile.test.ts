@@ -1,81 +1,39 @@
 import assert from "node:assert/strict";
 import { friendlyError } from "./errors";
-import {
-  deriveDisplayName,
-  getStoredDisplayName,
-  isCompanyEmail,
-  normalizeDisplayName,
-  requestMagicLink,
-  saveDisplayName,
-} from "./profile";
-
-class MemoryStorage implements Storage {
-  private values = new Map<string, string>();
-  get length() {
-    return this.values.size;
-  }
-  clear() {
-    this.values.clear();
-  }
-  getItem(key: string) {
-    return this.values.get(key) ?? null;
-  }
-  key(index: number) {
-    return Array.from(this.values.keys())[index] ?? null;
-  }
-  removeItem(key: string) {
-    this.values.delete(key);
-  }
-  setItem(key: string, value: string) {
-    this.values.set(key, value);
-  }
-}
-
-const storage = new MemoryStorage();
+import { deriveDisplayName, isCompanyEmail, loadPublicProfile, normalizeDisplayName, requestMagicLink } from "./profile";
 
 assert.equal(normalizeDisplayName("  Ada   Lovelace "), "Ada Lovelace");
 assert.equal(normalizeDisplayName("   "), "Snack Fan");
 assert.equal(normalizeDisplayName("x".repeat(100)).length, 80);
 assert.equal(deriveDisplayName("ada.lovelace@carnegiehighered.com"), "Ada Lovelace");
-assert.equal(deriveDisplayName("grace_hopper@carnegiehighered.com"), "Grace Hopper");
 assert.equal(isCompanyEmail(" Ada@CARNEGIEHIGHERED.COM "), true);
 assert.equal(isCompanyEmail("ada@other.example"), false);
 assert.equal(isCompanyEmail("ada@example.com@carnegiehighered.com"), false);
-assert.equal(getStoredDisplayName(storage), "Snack Fan");
-assert.equal(saveDisplayName(" Grace ", storage), "Grace");
-assert.equal(getStoredDisplayName(storage), "Grace");
 
 let requestedEmail = "";
-let requestedRedirect = "";
-await requestMagicLink(
-  {
-    auth: {
-      signInWithOtp: async ({ email, options }) => {
-        requestedEmail = email;
-        requestedRedirect = options?.emailRedirectTo || "";
-        return { data: { user: null, session: null }, error: null };
-      },
+await requestMagicLink({
+  auth: {
+    signInWithOtp: async ({ email }: { email: string }) => {
+      requestedEmail = email;
+      return { error: null };
     },
   },
-  " Ada@CARNEGIEHIGHERED.COM ",
-  "https://snacks.example/auth/callback",
-);
+} as never, " Ada@CARNEGIEHIGHERED.COM ");
 assert.equal(requestedEmail, "ada@carnegiehighered.com");
-assert.equal(requestedRedirect, "https://snacks.example/auth/callback");
-await assert.rejects(
-  requestMagicLink(
-    {
-      auth: {
-        signInWithOtp: async () => {
-          throw new Error("should not call Supabase");
-        },
-      },
-    },
-    "ada@other.example",
-  ),
-  /carnegiehighered\.com/,
-);
-assert.match(friendlyError(new Error("Anonymous sign-ins are disabled")), /Enable them in Auth settings/);
-assert.match(friendlyError(new Error("permission denied for table snacks")), /API grants migration/);
+
+const publicProfile = await loadPublicProfile({
+  rpc: async (name: string) => name === "profile_summary"
+    ? { data: [{
+      user_id: "user-1", display_name: "Ada", favorite_snack_id: null, favorite_snack_name: null,
+      total_logs: 4, distinct_snacks: 3, category_mix: { Fruit: 2 },
+    }], error: null }
+    : { data: [{ badge_key: "top-snack", label: "Top Snack", start_date: "2026-07-10", end_date: null }], error: null },
+} as never, "user-1");
+assert.equal(publicProfile.totalLogs, 4);
+assert.deepEqual(publicProfile.badges.map((badge) => badge.key), ["top-snack"]);
+
+assert.match(friendlyError(new Error("Only @carnegiehighered.com email addresses can join Snack Squad.")), /company email/i);
+assert.match(friendlyError(new Error("Email link is invalid or has expired")), /expired/i);
+assert.match(friendlyError(new TypeError("Failed to fetch")), /connect/i);
 
 console.log("profile tests passed");

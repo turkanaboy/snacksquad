@@ -1,10 +1,15 @@
 export function friendlyError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error || "");
-  if (message.includes("Anonymous sign-ins are disabled")) {
-    return "Supabase anonymous sign-ins are disabled. Enable them in Auth settings so Snack Squad can create no-login profiles.";
+  const lower = message.toLowerCase();
+  if (lower.includes("carnegiehighered.com")) return "Use your Carnegie Higher Ed company email.";
+  if (lower.includes("expired") || lower.includes("invalid") && lower.includes("link")) {
+    return "That magic link is invalid or expired. Request a new one.";
   }
-  if (message.includes("permission denied for table")) {
-    return "Supabase table grants are missing. Run the API grants migration so the app can reach the snack tables.";
+  if (lower.includes("rate limit") || lower.includes("too many requests")) {
+    return "Too many attempts. Wait a moment, then try again.";
+  }
+  if (lower.includes("failed to fetch") || lower.includes("network")) {
+    return "Could not connect to Snack Squad. Check your connection and try again.";
   }
   return message || "Something went sideways.";
 }
