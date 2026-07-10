@@ -3,7 +3,7 @@ name: Snack Squad
 description: A collectible snack-culture board built for fast logging, social ranking, and lightweight office competition.
 ---
 
-<!-- Palette approved 2026-07-10. High-fidelity north-star approval remains required before frontend implementation. -->
+<!-- Palette and high-fidelity Home north star approved 2026-07-10. -->
 
 # Design System: Snack Squad
 
@@ -14,6 +14,8 @@ description: A collectible snack-culture board built for fast logging, social ra
 Snack Squad should feel like a polished community board where recognizable snacks become collectible objects. The interface is used by employees at a desk under ordinary office lighting, often for a quick midday check-in, so its boldness must support fast scanning instead of becoming spectacle.
 
 The approved direction combines Letterboxd-like social list energy, Panini-style ranking and ownership cues, and the legibility of grocery shelf labels. A near-black shell, committed cobalt fields, acid-yellow actions, strong product photography, and oversized rank numerals provide identity. Familiar controls, restrained motion, and consistent task surfaces keep it trustworthy.
+
+`docs/design/snack-squad-home-north-star.png` is the approved desktop/mobile build target. It is authoritative for composition and component character; the written product requirements remain authoritative for behavior and content.
 
 **Key Characteristics:**
 
@@ -55,9 +57,9 @@ Approved WCAG contrast pairings: Label White on Counter Black (17.90:1), Label W
 
 ## Typography
 
-**Display Font:** Single contemporary sans family (`[font family to be chosen during implementation]`)
-**Body Font:** Same family (`[font family to be chosen during implementation]`)
-**Rank Font:** Condensed or tabular companion for rankings only (`[font family to be chosen during implementation]`)
+**Display Font:** `Arial Narrow`, `Roboto Condensed`, `Segoe UI`, sans-serif
+**Body Font:** `Inter`, `Segoe UI`, Arial, sans-serif
+**Rank Font:** `Arial Narrow`, `Roboto Condensed`, `Segoe UI`, sans-serif with tabular numerals
 
 **Character:** Sturdy, direct, and social. Ordinary interface labels remain calm and highly readable; compression and oversized weight are reserved for rankings and snack identity.
 
@@ -79,7 +81,29 @@ The system is flat by default. Depth comes from tonal fields, strong dividers, i
 
 ## Components
 
-Canonical component tokens will be defined after the approved palette and high-fidelity north-star screen are implemented. The direction probe establishes topology and character, not final component anatomy.
+The component system is deliberately small:
+
+- **Geometry:** Square fields and rows; controls may use a restrained 4px radius. No container uses a decorative pill or a radius above 8px.
+- **Rules:** One-pixel Shelf Gray dividers establish the board plane. Major selected regions use a 3px cobalt or yellow edge marker in addition to color.
+- **Controls:** Primary actions are at least 48px high; all touch targets are at least 44px. Buttons use text plus an icon only when the icon improves recognition.
+- **Activity row:** Product image, logger metadata, snack identity, and one upvote action. Desktop rows are dense and horizontal; mobile rows preserve image recognition while reducing metadata.
+- **Leaderboard row:** Rank, product image, snack name, and aggregate upvotes. Oversized condensed numerals are exclusive to rank and score.
+- **Search:** Cobalt field with a visible label, search icon, live listbox, keyboard selection, empty state, and manual-entry route.
+- **Status:** Loading, empty, error, locked, selected, and sudden-death states always pair color with text or iconography.
+
+### Responsive composition
+
+- **Desktop (960px and above):** Persistent 176px navigation rail, fluid activity column, and 280-320px Top 10 rail. Contest state anchors below activity rather than becoming another equal card.
+- **Tablet (760-959px):** Navigation rail narrows; Top 10 becomes a horizontal strip below activity.
+- **Mobile (below 760px):** Four-item bottom navigation (Home, Log, Contests, Profile), compact header, stacked activity, horizontal Top 10 preview, and no separate Fantasy navigation item.
+
+### Imagery
+
+Use HTTPS package photography or clean product imagery with `object-fit: contain`. Images are recognition aids, never decorative heroes. Failed images fall back to a high-contrast initial tile without changing row height.
+
+### Motion
+
+Routine feedback uses explicit 120-200ms opacity, color, border-color, or transform transitions with ease-out. Pressed controls may scale to 0.98. Popovers originate from their trigger. Navigation and keyboard actions do not animate, and `prefers-reduced-motion` removes nonessential transitions.
 
 Do not treat the probe's downvote buttons, comment counts, invented clubs, three-item mobile navigation, or sports-score styling as product components. Snack Squad is upvote-only, has no comments, and mobile navigation must include Home, Log, Contests, and Profile.
 
@@ -92,7 +116,7 @@ Do not treat the probe's downvote buttons, comment counts, invented clubs, three
 - **Do** use asymmetric hierarchy: activity board, Top 10, and contest state should not look like identical modules.
 - **Do** preserve familiar product controls, visible keyboard focus, touch-friendly targets, and color-independent state cues.
 - **Do** keep routine state transitions responsive, interruptible, and below 300 ms, with reduced-motion alternatives.
-- **Do** treat `docs/design/collectible-culture-direction.png` as the structural north star while keeping the final UI semantic and responsive.
+- **Do** treat `docs/design/snack-squad-home-north-star.png` as the approved implementation north star while keeping the final UI semantic and responsive.
 
 ### Don't:
 
