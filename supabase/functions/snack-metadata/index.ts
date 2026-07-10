@@ -16,20 +16,23 @@ function json(body: unknown, status = 200) {
 function openFoodFactsUrl(query: string) {
   if (/^\d{8,14}$/.test(query)) {
     const url = new URL(`https://world.openfoodfacts.org/api/v3.6/product/${query}.json`);
-    url.searchParams.set("fields", "code,product_name,generic_name,brands,categories,image_url,url");
+    url.searchParams.set("fields", "code,product_name,generic_name,brands,categories,categories_tags,image_url,url,nutrition_grades,nutriments");
     return { url, barcode: true };
   }
 
   const url = new URL("https://search.openfoodfacts.org/search");
   url.searchParams.set("q", query);
   url.searchParams.set("page_size", "3");
-  url.searchParams.set("fields", "code,product_name,generic_name,brands,categories,image_url,url");
+  url.searchParams.set("fields", "code,product_name,generic_name,brands,categories,categories_tags,image_url,url,nutrition_grades,nutriments");
   return { url, barcode: false };
 }
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
+  if (!request.headers.get("Authorization")?.startsWith("Bearer ")) {
+    return json({ error: "Authentication required." }, 401);
+  }
 
   let query: unknown;
   try {
@@ -65,9 +68,10 @@ Deno.serve(async (request) => {
 
     const data = await response.json() as {
       product?: OpenFoodFactsProduct;
-      hits?: OpenFoodFactsProduct[];
+      hits?: unknown;
     };
-    const products = barcode ? (data.product ? [data.product] : []) : (data.hits ?? []);
+    if (!barcode && !Array.isArray(data.hits)) return json({ error: "Snack lookup returned an invalid response." }, 502);
+    const products = barcode ? (data.product ? [data.product] : []) : data.hits as OpenFoodFactsProduct[];
     return json({ products: mapOpenFoodFactsProducts(products, cleanedQuery) });
   } catch (error) {
     console.error("Open Food Facts request failed", error);
