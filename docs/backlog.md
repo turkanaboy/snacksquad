@@ -22,7 +22,7 @@
 - [x] Add optional image URL preview validation.
 - [x] Add simple duplicate suggestions beyond exact normalized names.
 - [x] Add Open Food Facts lookup adapter skeleton.
-- [ ] Revisit authenticated Open Food Facts lookup after API access is approved and real duplicates become annoying.
+- [x] Route Open Food Facts lookup through an authenticated Supabase Edge Function.
 
 ## Culture Features
 

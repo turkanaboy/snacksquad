@@ -116,9 +116,11 @@ export default function App() {
   }
 
   async function fillMetadata() {
+    if (!supabase || !profile) return;
+    const client = supabase;
     await run(async () => {
       setMetadataMessage("");
-      const [match] = await searchSnackMetadata(snackDraft.name);
+      const [match] = await searchSnackMetadata(client, snackDraft.name);
       if (!match) {
         setMetadataMessage("No snack metadata match yet.");
         return;
@@ -398,7 +400,7 @@ export default function App() {
                 placeholder="Crunchy, sweet, spicy..."
               />
             </label>
-            <button type="button" className="utility-button" onClick={fillMetadata} disabled={!snackDraft.name || busy}>
+            <button type="button" className="utility-button" onClick={fillMetadata} disabled={!profile || !snackDraft.name || busy}>
               Find snack info
             </button>
             {metadataMessage ? <p className="source-note">{metadataMessage}</p> : null}
