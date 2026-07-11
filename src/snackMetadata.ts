@@ -82,19 +82,16 @@ export function mergeSnackMetadata(local: SnackMetadata[], remote: SnackMetadata
 export function createSnackSearch(
   source: SnackSearchSource,
   onResults: (query: string, products: SnackMetadata[]) => void,
-  delayMs = 400,
   onError: (query: string, error: unknown) => void = () => {},
   outageCooldownMs = 60_000,
 ) {
   let version = 0;
-  let timer: ReturnType<typeof setTimeout> | undefined;
   let nameSearchRetryAt = 0;
   let lastNameSearchError: unknown;
 
-  async function search(value: string): Promise<void> {
+  async function run(value: string, includeRemote: boolean): Promise<void> {
     const query = value.trim();
     const currentVersion = ++version;
-    if (timer) clearTimeout(timer);
 
     if (!query) {
       onResults(query, []);
@@ -104,6 +101,7 @@ export function createSnackSearch(
     const local = await source.local(query);
     if (currentVersion !== version) return;
     onResults(query, local);
+    if (!includeRemote) return;
 
     const isBarcode = /^\d{8,14}$/.test(query);
     if (!isBarcode && query.length < 3) return;
@@ -113,32 +111,27 @@ export function createSnackSearch(
       return;
     }
 
-    const addRemote = async () => {
-      try {
-        const remote = await source.remote(query);
-        if (!isBarcode) {
-          nameSearchRetryAt = 0;
-          lastNameSearchError = undefined;
-        }
-        if (currentVersion === version) onResults(query, mergeSnackMetadata(local, remote));
-      } catch (error) {
-        if (!isBarcode) {
-          nameSearchRetryAt = Date.now() + outageCooldownMs;
-          lastNameSearchError = error;
-        }
-        if (currentVersion === version) onError(query, error);
+    try {
+      const remote = await source.remote(query);
+      if (!isBarcode) {
+        nameSearchRetryAt = 0;
+        lastNameSearchError = undefined;
       }
-    };
-
-    if (isBarcode) await addRemote();
-    else timer = setTimeout(() => void addRemote(), delayMs);
+      if (currentVersion === version) onResults(query, mergeSnackMetadata(local, remote));
+    } catch (error) {
+      if (!isBarcode) {
+        nameSearchRetryAt = Date.now() + outageCooldownMs;
+        lastNameSearchError = error;
+      }
+      if (currentVersion === version) onError(query, error);
+    }
   }
 
   return {
-    search,
+    search: (value: string) => run(value, false),
+    searchRemote: (value: string) => run(value, true),
     dispose() {
       version += 1;
-      if (timer) clearTimeout(timer);
     },
   };
 }
@@ -197,13 +190,12 @@ export async function searchLocalSnacks(
 export function createSupabaseSnackSearch(
   client: Pick<SupabaseClient, "from" | "functions">,
   onResults: (query: string, products: SnackMetadata[]) => void,
-  delayMs = 400,
   onError?: (query: string, error: unknown) => void,
 ) {
   return createSnackSearch({
     local: (query) => searchLocalSnacks(client, query),
     remote: (query) => searchSnackMetadata(client, query),
-  }, onResults, delayMs, onError);
+  }, onResults, onError);
 }
 
 export async function submitSnackCorrection(
