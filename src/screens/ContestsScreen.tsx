@@ -55,8 +55,7 @@ export function ContestsScreen({ client, currentUserId, fantasyEnabled, onOpenFa
   useEffect(() => () => search.dispose(), [search]);
   useEffect(() => {
     if (nominationQuery.trim().length < 2) { setNominationResults([]); setSearching(false); return; }
-    setSearching(true);
-    void search.search(nominationQuery).finally(() => setSearching(false));
+    void search.search(nominationQuery);
   }, [nominationQuery, search]);
 
   async function submitNominationSearch(event: FormEvent) {
