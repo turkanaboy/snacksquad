@@ -51,6 +51,14 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
     void search.search(query);
   }, [query, search]);
 
+  useEffect(() => {
+    const submittedQuery = initialQuery.trim();
+    if (submittedQuery.length < 3) return;
+    setSearching(true);
+    setSearchedQuery(submittedQuery);
+    void search.searchRemote(submittedQuery).finally(() => setSearching(false));
+  }, [initialQuery, search]);
+
   async function submitSearch(event: FormEvent) {
     event.preventDefault();
     if (query.trim().length < 3) return;
