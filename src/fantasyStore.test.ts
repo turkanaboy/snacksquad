@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { getFantasyFeatureState,getMyFantasyLeagues,getFantasyOverview,joinFantasyLeague } from "./fantasyStore";
+const calls:Array<{name:string;params?:unknown}>=[];
+const client={rpc:async(name:string,params?:unknown)=>{calls.push({name,params});if(name==="fantasy_feature_state")return{data:{enabled:false,weeksObserved:1,dailyActiveUsers:2,fullBracketParticipation:false,weeklyUserGrowth:true,averageLogsPerUserWeek:2.5},error:null};if(name==="my_fantasy_leagues")return{data:[{league_id:"l1",name:"Crunch Club",join_code:"abc",member_count:4,is_creator:true}],error:null};if(name==="fantasy_overview")return{data:{league:{id:"l1",name:"Crunch Club",join_code:"abc"},members:[],season:null,draftOrder:[],picks:[],roster:[],standings:[]},error:null};return{data:"l1",error:null};}};
+assert.equal((await getFantasyFeatureState(client as never)).enabled,false);
+assert.equal((await getMyFantasyLeagues(client as never))[0].memberCount,4);
+assert.equal((await getFantasyOverview(client as never,"l1")).league.name,"Crunch Club");
+assert.equal(await joinFantasyLeague(client as never,"abc"),"l1");
+assert.equal(calls.length,4);
+console.log("fantasy store tests passed");

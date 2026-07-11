@@ -1,5 +1,9 @@
 export function friendlyError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error || "");
+  const message = error instanceof Error
+    ? error.message
+    : error && typeof error === "object" && "message" in error && typeof error.message === "string"
+      ? error.message
+      : String(error || "");
   const lower = message.toLowerCase();
   if (lower.includes("carnegiehighered.com")) return "Use your Carnegie Higher Ed company email.";
   if (lower.includes("expired") || lower.includes("invalid") && lower.includes("link")) {
