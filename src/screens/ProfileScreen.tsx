@@ -5,6 +5,7 @@ import type { LeaderboardItem, MySnackLog } from "../snackStore";
 import { getMySnackLogs, removeSnackLog } from "../snackStore";
 import type { Profile, PublicProfile } from "../profile";
 import { isModerator, listSnackCorrections, reviewSnackCorrection, type SnackCorrection } from "../snackMetadata";
+import { friendlyError } from "../errors";
 
 type Props = {
   client: SupabaseClient;
@@ -46,7 +47,7 @@ export function ProfileScreen({
   }
 
   useEffect(() => {
-    if (!publicProfile) void refreshPrivate().catch((error) => setMessage(error instanceof Error ? error.message : "Could not load your profile."));
+    if (!publicProfile) void refreshPrivate().catch((error) => setMessage(friendlyError(error)));
   }, [publicProfile]);
 
   const favoriteOptions = useMemo(() => {
@@ -78,7 +79,7 @@ export function ProfileScreen({
       await onUpdate({ displayName, favoriteSnackId: favoriteSnackId || null });
       setMessage("Profile saved.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not save your profile.");
+      setMessage(friendlyError(error));
     } finally {
       setBusy(false);
     }
@@ -92,7 +93,7 @@ export function ProfileScreen({
       onChanged();
       setMessage("Today’s log was removed.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not remove that log.");
+      setMessage(friendlyError(error));
     } finally {
       setBusy(false);
     }
@@ -105,7 +106,7 @@ export function ProfileScreen({
       await refreshPrivate();
       setMessage(approve ? "Correction approved." : "Correction rejected.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not review that correction.");
+      setMessage(friendlyError(error));
     } finally {
       setBusy(false);
     }

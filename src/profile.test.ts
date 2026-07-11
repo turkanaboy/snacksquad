@@ -35,5 +35,7 @@ assert.deepEqual(publicProfile.badges.map((badge) => badge.key), ["top-snack"]);
 assert.match(friendlyError(new Error("Only @carnegiehighered.com email addresses can join Snack Squad.")), /company email/i);
 assert.match(friendlyError(new Error("Email link is invalid or has expired")), /expired/i);
 assert.match(friendlyError(new TypeError("Failed to fetch")), /connect/i);
+assert.doesNotMatch(friendlyError(new Error('duplicate key violates constraint "snack_logs_user_id_snack_id_logged_on_key"')), /constraint|snack_logs/i);
+assert.doesNotMatch(friendlyError(new Error('new row violates row-level security policy for table "snacks"')), /security|snacks/i);
 
 console.log("profile tests passed");

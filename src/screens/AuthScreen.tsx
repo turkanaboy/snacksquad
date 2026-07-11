@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { friendlyError } from "../errors";
 
 type Props = {
   initialError?: string;
@@ -10,6 +11,13 @@ export function AuthScreen({ initialError, onRequestLink }: Props) {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(initialError || "");
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (!cooldown) return;
+    const timer = window.setTimeout(() => setCooldown(cooldown - 1), 1_000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -18,8 +26,9 @@ export function AuthScreen({ initialError, onRequestLink }: Props) {
     try {
       await onRequestLink(email);
       setSent(true);
+      setCooldown(60);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Could not send the magic link.");
+      setError(friendlyError(nextError));
     } finally {
       setBusy(false);
     }
@@ -53,7 +62,9 @@ export function AuthScreen({ initialError, onRequestLink }: Props) {
               required
               autoFocus
             />
-            <button className="primary-button" disabled={busy}>{busy ? "Sending…" : "Email me a magic link"}</button>
+            <button className="primary-button" disabled={busy || cooldown > 0}>
+              {busy ? "Sending…" : cooldown ? `Try again in ${cooldown}s` : "Email me a magic link"}
+            </button>
           </form>
         )}
         {error ? <p className="error-message" role="alert">{error}</p> : null}

@@ -32,6 +32,8 @@ export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [view, setView] = useState<AppView>("home");
   const [board, setBoard] = useState<BoardEntry[]>([]);
+  const [hasMoreBoard, setHasMoreBoard] = useState(false);
+  const [loadingMoreBoard, setLoadingMoreBoard] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
@@ -46,6 +48,7 @@ export default function App() {
     try {
       const [nextBoard, nextLeaderboard] = await Promise.all([getBoard(supabase), getLeaderboard(supabase)]);
       setBoard(nextBoard);
+      setHasMoreBoard(nextBoard.length === 30);
       setLeaderboard(nextLeaderboard);
     } catch (error) {
       setNotice(friendlyError(error));
@@ -53,6 +56,24 @@ export default function App() {
       setLoading(false);
     }
   }, []);
+
+  async function loadMoreBoard() {
+    const before = board.at(-1)?.loggedAt;
+    if (!before || loadingMoreBoard) return;
+    setLoadingMoreBoard(true);
+    try {
+      const nextBoard = await getBoard(client, 30, before);
+      setBoard((current) => {
+        const knownIds = new Set(current.map((entry) => entry.id));
+        return [...current, ...nextBoard.filter((entry) => !knownIds.has(entry.id))];
+      });
+      setHasMoreBoard(nextBoard.length === 30);
+    } catch (error) {
+      setNotice(friendlyError(error));
+    } finally {
+      setLoadingMoreBoard(false);
+    }
+  }
 
   useEffect(() => {
     if (!supabase) return;
@@ -165,10 +186,13 @@ export default function App() {
           leaderboard={leaderboard}
           currentUserId={activeSession.user.id}
           loading={loading}
+          hasMore={hasMoreBoard}
+          loadingMore={loadingMoreBoard}
           onSearch={openLog}
           onUpvote={(entry) => void toggleUpvote(entry)}
           onOpenProfile={(userId) => void openCoworkerProfile(userId)}
           onOpenContests={() => setView("contests")}
+          onLoadMore={() => void loadMoreBoard()}
         />
       ) : null}
       {view === "log" ? (

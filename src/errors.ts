@@ -15,5 +15,8 @@ export function friendlyError(error: unknown): string {
   if (lower.includes("failed to fetch") || lower.includes("network")) {
     return "Could not connect to Snack Squad. Check your connection and try again.";
   }
+  if (/\b(relation|column|constraint|schema|sqlstate)\b|duplicate key|row-level security|permission denied for|public\.[a-z_]+/i.test(message)) {
+    return "Snack Squad could not complete that action. Try again.";
+  }
   return message || "Something went sideways.";
 }

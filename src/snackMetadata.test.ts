@@ -4,7 +4,6 @@ import {
   mergeSnackMetadata,
   saveSelectedSnack,
   searchSnackMetadata,
-  toCatalogSnackParams,
 } from "./snackMetadata";
 
 const calls: Array<{ name: string; body?: unknown }> = [];
@@ -74,35 +73,20 @@ await search.searchRemote("3017624010701");
 assert.equal(searchCalls.at(-1), "3017624010701");
 search.dispose();
 
-assert.deepEqual(toCatalogSnackParams({
-  name: "  Cheez-It   Original  ",
-  brand: "Cheez-It",
-  barcode: "024100705509",
-  category: "Grains/Bakery",
-  sourceCategories: ["en:crackers"],
-  nutriScore: "c",
-  nutritionComplete: true,
-}), {
-  p_name: "Cheez-It Original",
-  p_brand: "Cheez-It",
-  p_barcode: "024100705509",
-  p_category: "Grains/Bakery",
-  p_source_categories: ["en:crackers"],
-  p_image_url: null,
-  p_source_url: null,
-  p_nutri_score: "c",
-  p_nutrition_complete: true,
-});
-
-let rpcParams: unknown;
 assert.equal(await saveSelectedSnack({
-  rpc: async (name: string, params: unknown) => {
-    assert.equal(name, "upsert_catalog_snack");
-    rpcParams = params;
-    return { data: "snack-id", error: null } as never;
+  functions: {
+    async invoke(name: string, options: { body: unknown }) {
+      assert.equal(name, "snack-metadata");
+      assert.deepEqual(options.body, { importId: "123" });
+      return { data: { snackId: "snack-id" }, error: null };
+    },
   },
-} as never, { name: "Pretzels", category: "Unexpected" }), "snack-id");
-assert.equal((rpcParams as { p_category: string }).p_category, "Other");
+} as never, { providerId: "123", name: "Pretzels" }), "snack-id");
+
+await assert.rejects(
+  () => saveSelectedSnack({ functions: { invoke: async () => ({ data: null, error: null }) } } as never, { name: "Untrusted" }),
+  /verified catalog result/,
+);
 
 await assert.rejects(
   () => searchSnackMetadata({
@@ -144,5 +128,13 @@ assert.deepEqual(outageErrors, ["pretzel", "cheese"]);
 await outageSearch.searchRemote("3017624010701");
 assert.deepEqual(outageCalls, ["pretzel", "3017624010701"]);
 outageSearch.dispose();
+
+const localErrors: string[] = [];
+const failedLocalSearch = createSnackSearch({
+  local: async () => { throw new Error("Local unavailable"); },
+  remote: async () => [],
+}, () => {}, (query) => localErrors.push(query));
+await failedLocalSearch.search("chips");
+assert.deepEqual(localErrors, ["chips"]);
 
 console.log("snack metadata tests passed");
