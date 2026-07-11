@@ -286,6 +286,44 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
 .fantasy-lock { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 32px 0; }
 .fantasy-lock > b { padding: 8px 10px; color: var(--receipt); border: var(--rule); font-size: .75rem; text-transform: uppercase; }
 
+/* Fantasy */
+.fantasy-screen { width:min(1180px,100%); margin:0 auto; padding:clamp(28px,5vw,70px); }
+.fantasy-hero { max-width:900px; padding-bottom:32px; border-bottom:var(--rule); }
+.fantasy-hero h1 { max-width:820px; font-size:clamp(3rem,8vw,7rem); line-height:.86; }
+.fantasy-hero p:last-child { max-width:680px; color:var(--receipt); line-height:1.55; }
+.pilot-meter { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; margin-top:34px; border:var(--rule); background:var(--shelf); }
+.pilot-meter div { min-height:150px; display:grid; align-content:space-between; padding:16px; background:var(--board); }
+.pilot-meter span,.pilot-meter small { color:var(--receipt); font-size:.75rem; text-transform:uppercase; }
+.pilot-meter b { font-family:"Arial Narrow",sans-serif; font-size:2.4rem; }
+.pilot-meter .passed { box-shadow:inset 0 5px var(--yellow); }
+.pilot-meter .passed small { color:var(--yellow); }
+.lock-note { max-width:640px; margin:24px 0; color:var(--receipt); }
+.fantasy-onboarding { display:grid; grid-template-columns:1fr 1fr; gap:1px; margin-top:30px; border:var(--rule); background:var(--shelf); }
+.fantasy-onboarding form { display:grid; gap:18px; padding:28px; background:var(--board); }
+.league-switcher { display:flex; align-items:end; justify-content:space-between; gap:24px; padding:24px 0; border-bottom:var(--rule); }
+.league-switcher label { min-width:min(420px,100%); }
+.league-switcher span,.league-switcher b,.league-switcher small { display:block; }
+.league-switcher small { margin-top:4px; color:var(--receipt); }
+.draft-lobby { display:flex; align-items:center; justify-content:space-between; gap:28px; padding:34px 0; }
+.draft-lobby p { max-width:600px; color:var(--receipt); }
+.draft-status { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; margin:28px 0; border:var(--rule); background:var(--shelf); }
+.draft-status>span { min-height:96px; padding:14px; background:var(--board); }
+.draft-status small,.draft-status b { display:block; }
+.draft-status small { color:var(--receipt); text-transform:uppercase; }
+.draft-status b { margin-top:12px; overflow-wrap:anywhere; }
+.draft-room,.active-fantasy { display:grid; grid-template-columns:1.2fr .8fr; gap:32px; }
+.draft-board ol,.fantasy-search,.preference-queue ol,.standings ol,.my-roster ul { margin:0; padding:0; list-style:none; border:var(--rule); background:var(--board); }
+.draft-board li,.fantasy-search li,.standings li,.my-roster li { display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:12px; min-height:62px; padding:10px 12px; border-bottom:var(--rule); }
+.draft-board li:last-child,.fantasy-search li:last-child,.standings li:last-child,.my-roster li:last-child { border-bottom:0; }
+.draft-board small,.fantasy-search small,.my-roster small { color:var(--receipt); }
+.draft-actions { display:grid; align-content:start; gap:14px; }
+.fantasy-search li { grid-template-columns:minmax(0,1fr) auto; }
+.preference-queue { display:grid; gap:12px; }
+.preference-queue ol { padding:12px 12px 12px 36px; }
+.standings li { grid-template-columns:32px minmax(0,1fr) auto; }
+.my-roster { display:grid; align-content:start; gap:14px; }
+.my-roster li { grid-template-columns:minmax(0,1fr) auto; }
+
 @media (hover: hover) and (pointer: fine) {
   .primary-button:hover { background: #fff04b; }
   .secondary-button:hover, .contest-strip:hover { border-color: var(--label); }
@@ -363,6 +401,11 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
   .report-row strong { grid-column: 2; }
   .fantasy-lock { grid-template-columns: 44px 1fr; }
   .fantasy-lock > b { grid-column: 2; justify-self: start; }
+  .fantasy-screen { padding:28px 14px; }
+  .pilot-meter { grid-template-columns:repeat(5,minmax(130px,1fr)); overflow-x:auto; }
+  .fantasy-onboarding,.draft-room,.active-fantasy { grid-template-columns:1fr; }
+  .league-switcher,.draft-lobby { align-items:stretch; flex-direction:column; }
+  .draft-status { grid-template-columns:1fr 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

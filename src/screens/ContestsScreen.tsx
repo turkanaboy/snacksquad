@@ -9,13 +9,13 @@ import {
 import { friendlyError } from "../errors";
 import { createSupabaseSnackSearch, saveSelectedSnack, type SnackMetadata } from "../snackMetadata";
 
-type Props = { client: SupabaseClient; currentUserId: string };
+type Props = { client: SupabaseClient; currentUserId: string; fantasyEnabled: boolean; onOpenFantasy: () => void };
 
 function weekLabel(value: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(`${value}T12:00:00`));
 }
 
-export function ContestsScreen({ client, currentUserId }: Props) {
+export function ContestsScreen({ client, currentUserId, fantasyEnabled, onOpenFantasy }: Props) {
   const [overview, setOverview] = useState<ContestOverview | null>(null);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
   const [badges, setBadges] = useState<BadgeTenure[]>([]);
@@ -132,7 +132,7 @@ export function ContestsScreen({ client, currentUserId }: Props) {
         <div className="badge-panel"><div className="section-heading"><div><h2>Your badge tenures</h2><p>Current runs stay open until dethroned.</p></div></div><BadgeHistory badges={badges} /></div>
       </section>
 
-      <section className="fantasy-lock"><span className="desk-number">03</span><div><p className="section-label">Fantasy league</p><h2>Locked for the pilot.</h2><p>Fantasy opens only after four weeks of healthy participation.</p></div><b>4-week gate</b></section>
+      <section className="fantasy-lock"><span className="desk-number">03</span><div><p className="section-label">Fantasy league</p><h2>{fantasyEnabled ? "The draft room is open." : "Locked for the pilot."}</h2><p>{fantasyEnabled ? "Create or join a private monthly league." : "Fantasy opens only after four weeks of healthy participation."}</p></div><button className={fantasyEnabled ? "primary-button" : "secondary-button"} onClick={onOpenFantasy}>{fantasyEnabled ? "Open fantasy" : "View pilot gate"}</button></section>
     </div>
   );
 }

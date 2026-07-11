@@ -6,6 +6,8 @@ import { ContestsScreen } from "./screens/ContestsScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LogScreen } from "./screens/LogScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
+import { FantasyScreen } from "./screens/FantasyScreen";
+import { getFantasyFeatureState, type FantasyFeatureState } from "./fantasyStore";
 import { friendlyError } from "./errors";
 import {
   loadMyProfile, loadPublicProfile, loadSession, observeSession, requestMagicLink,
@@ -36,6 +38,7 @@ export default function App() {
   const [logQuery, setLogQuery] = useState("");
   const [editingLog, setEditingLog] = useState<MySnackLog | null>(null);
   const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null);
+  const [fantasyFeature, setFantasyFeature] = useState<FantasyFeatureState>({ enabled:false,weeksObserved:0,dailyActiveUsers:0,fullBracketParticipation:false,weeklyUserGrowth:false,averageLogsPerUserWeek:0 });
 
   const refreshCore = useCallback(async () => {
     if (!supabase) return;
@@ -65,8 +68,8 @@ export default function App() {
       setProfile(null);
       return;
     }
-    void Promise.all([loadMyProfile(supabase), refreshCore()])
-      .then(([nextProfile]) => setProfile(nextProfile))
+    void Promise.all([loadMyProfile(supabase), refreshCore(), getFantasyFeatureState(supabase)])
+      .then(([nextProfile,,nextFantasy]) => { setProfile(nextProfile); setFantasyFeature(nextFantasy); })
       .catch((error) => setNotice(friendlyError(error)));
   }, [session, refreshCore]);
 
@@ -153,6 +156,7 @@ export default function App() {
       email={activeSession.user.email || "Company member"}
       onNavigate={navigate}
       onSignOut={() => void signOut(client)}
+      fantasyEnabled={fantasyFeature.enabled}
     >
       {notice ? <div className="global-notice" role="status"><span>{notice}</span><button className="text-button" onClick={() => setNotice("")}>Dismiss</button></div> : null}
       {view === "home" ? (
@@ -190,8 +194,9 @@ export default function App() {
         />
       ) : null}
       {view === "contests" ? (
-        <ContestsScreen client={client} currentUserId={activeSession.user.id} />
+        <ContestsScreen client={client} currentUserId={activeSession.user.id} fantasyEnabled={fantasyFeature.enabled} onOpenFantasy={() => setView("fantasy")} />
       ) : null}
+      {view === "fantasy" ? <FantasyScreen client={client} currentUserId={activeSession.user.id} feature={fantasyFeature} /> : null}
     </AppShell>
   );
 }
