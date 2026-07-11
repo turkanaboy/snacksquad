@@ -37,6 +37,7 @@ assert.deepEqual(mapUsdaFoods([{ brandOwner: "Fallback Brand" }], "cheese"), [{
   nutritionComplete: false,
 }]);
 assert.equal(mapUsdaFoods([{ foodCategory: "Cheese" }], "cheese")[0].category, "Dairy");
+assert.equal(mapUsdaFoods([{ foodCategory: "Fruits and Fruit Juices" }], "banana")[0].category, "Fruit");
 assert.equal(mapUsdaFoods([{ foodCategory: "Candy" }], "candy")[0].category, "Candy/Sweets");
 assert.equal(mapUsdaFoods([{ foodCategory: "Chips, Pretzels & Snacks" }], "chips")[0].category, "Chips/Savory Snacks");
 assert.equal(mapUsdaFoods([{ gtinUpc: "not-a-barcode" }], "chips")[0].barcode, undefined);
@@ -49,5 +50,12 @@ assert.deepEqual(selectUsdaFoods([
   { fdcId: 3, dataType: "Foundation", description: "Apples, honeycrisp, with skin, raw" },
   { fdcId: 4, dataType: "Branded", description: "Apple cider", brandName: "Other" },
 ], "honeycrisp").map((food) => food.fdcId), [3, 1]);
+
+assert.deepEqual(selectUsdaFoods([
+  { fdcId: 1, dataType: "Foundation", description: "Bananas, overripe, raw", foodCategory: "Fruits and Fruit Juices" },
+  { fdcId: 2, dataType: "Foundation", description: "Bananas, ripe and slightly ripe, raw", foodCategory: "Fruits and Fruit Juices" },
+  { fdcId: 3, dataType: "Foundation", description: "Peppers, banana or Hungarian wax, seeded, raw", foodCategory: "Vegetables and Vegetable Products" },
+  { fdcId: 4, dataType: "Branded", description: "BANANA CHIPS, BANANA", brandName: "Snack Brand", foodCategory: "Wholesome Snacks" },
+], "banana").map((food) => food.fdcId), [2]);
 
 console.log("USDA product mapping tests passed");
