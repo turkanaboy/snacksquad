@@ -20,6 +20,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SnackMetadata[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchedQuery, setSearchedQuery] = useState("");
   const [searchError, setSearchError] = useState("");
   const [busyKey, setBusyKey] = useState("");
   const [manualName, setManualName] = useState(initialQuery);
@@ -45,14 +46,15 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
 
   useEffect(() => {
     setManualName(query);
-    setSearching(Boolean(query.trim()));
-    void search.search(query).finally(() => setSearching(false));
+    setSearchedQuery("");
+    void search.search(query);
   }, [query, search]);
 
   async function submitSearch(event: FormEvent) {
     event.preventDefault();
     if (query.trim().length < 3) return;
     setSearching(true);
+    setSearchedQuery(query.trim());
     setSearchError("");
     await search.searchRemote(query);
     setSearching(false);
@@ -121,7 +123,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
           />
           <button className="primary-button compact" disabled={searching || query.trim().length < 3}>{searching ? "Searching…" : "Search"}</button>
         </form>
-        {searching ? <p className="search-status" role="status">Searching known snacks…</p> : null}
+        {searching ? <p className="search-status" role="status">Searching products…</p> : null}
         {searchError ? <p className="warning-message" role="status">{searchError}</p> : null}
         <div id="snack-results" className="search-results" aria-live="polite" aria-label="Snack results">
           {results.map((snack, index) => {
@@ -145,7 +147,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
               </article>
             );
           })}
-          {!searching && query.trim().length >= 2 && results.length === 0 ? (
+          {!searching && searchedQuery === query.trim() && results.length === 0 ? (
             <p className="empty-state">
               {searchError ? `Enter “${query.trim()}” below to log it manually.` : "No catalog match yet. Add it manually below."}
             </p>
