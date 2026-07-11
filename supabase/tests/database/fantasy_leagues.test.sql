@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
-select plan(42);
+select plan(48);
 
 select has_table('public','fantasy_leagues','fantasy leagues are persisted');
 select has_table('public','fantasy_league_members','private league membership is persisted');
@@ -19,6 +19,12 @@ select has_function('public','set_fantasy_preferences',array['uuid','uuid[]'],'m
 select has_function('public','submit_fantasy_waiver',array['uuid','uuid','uuid','timestamp with time zone'],'Friday waiver is explicit');
 select has_function('public','fantasy_standings',array['uuid'],'fantasy points derive from source activity');
 select has_function('public','reconcile_fantasy',array['timestamp with time zone'],'expired clocks and seasons reconcile idempotently');
+select ok(not has_function_privilege('authenticated','public.start_fantasy_draft(uuid,date,timestamp with time zone)','EXECUTE'),'authenticated callers cannot spoof draft time');
+select ok(not has_function_privilege('authenticated','public.submit_fantasy_pick(uuid,uuid,timestamp with time zone)','EXECUTE'),'authenticated callers cannot spoof pick time');
+select ok(not has_function_privilege('authenticated','public.submit_fantasy_waiver(uuid,uuid,uuid,timestamp with time zone)','EXECUTE'),'authenticated callers cannot spoof waiver time');
+select ok(has_function_privilege('authenticated','public.start_fantasy_draft(uuid,date)','EXECUTE'),'authenticated callers can use the server-clock draft wrapper');
+select ok(has_function_privilege('authenticated','public.submit_fantasy_pick(uuid,uuid)','EXECUTE'),'authenticated callers can use the server-clock pick wrapper');
+select ok(has_function_privilege('authenticated','public.submit_fantasy_waiver(uuid,uuid,uuid)','EXECUTE'),'authenticated callers can use the server-clock waiver wrapper');
 
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 select ('13000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','fantasy'||n||'@carnegiehighered.com','',now(),'{}','{}',now(),now() from generate_series(1,4)n;
@@ -52,10 +58,8 @@ select lives_ok($$select public.join_fantasy_league('abcdefabcdefabcdef')$$,'fou
 reset role;
 select is((select count(*)::bigint from public.fantasy_league_members),4::bigint,'league has four managers');
 
-set local role authenticated;
 select set_config('request.jwt.claim.sub','13000000-0000-0000-0000-000000000001',true);
 select lives_ok($$select public.start_fantasy_draft((select league_id from public.my_fantasy_leagues() where name='Crunch Club'),'2026-07-01','2026-07-01 13:00+00')$$,'creator starts a catalog-safe draft');
-reset role;
 select is((select count(*)::bigint from public.fantasy_draft_order),4::bigint,'all managers receive a draft position');
 select is((select count(distinct position)::bigint from public.fantasy_draft_order),4::bigint,'draft positions are unique');
 select is((select public.fantasy_current_picker(id,1) from public.fantasy_seasons),(select user_id from public.fantasy_draft_order where position=1),'pick one uses position one');

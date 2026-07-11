@@ -185,6 +185,7 @@ declare season_id uuid; member_count integer; eligible_categories integer; first
 begin
   perform public.require_fantasy_enabled();
   if p_month <> date_trunc('month', p_month)::date then raise exception 'Month must be the first day.'; end if;
+  if p_month <> date_trunc('month',public.eastern_date(p_at))::date then raise exception 'Draft month must be current.'; end if;
   if not exists (select 1 from public.fantasy_leagues where id = p_league_id and created_by = auth.uid()) then raise exception 'Only the league creator can start the draft.'; end if;
   select count(*) into member_count from public.fantasy_league_members where league_id = p_league_id;
   if member_count < 4 or member_count > 8 then raise exception 'A league needs four to eight managers.'; end if;
@@ -314,6 +315,21 @@ begin
 end
 $$;
 
+create function public.start_fantasy_draft(p_league_id uuid, p_month date)
+returns uuid language sql security definer set search_path = '' as $$
+  select public.start_fantasy_draft(p_league_id,p_month,now())
+$$;
+
+create function public.submit_fantasy_pick(p_season_id uuid, p_snack_id uuid)
+returns void language sql security definer set search_path = '' as $$
+  select public.submit_fantasy_pick(p_season_id,p_snack_id,now())
+$$;
+
+create function public.submit_fantasy_waiver(p_season_id uuid, p_outgoing_snack_id uuid, p_incoming_snack_id uuid)
+returns void language sql security definer set search_path = '' as $$
+  select public.submit_fantasy_waiver(p_season_id,p_outgoing_snack_id,p_incoming_snack_id,now())
+$$;
+
 create function public.reconcile_fantasy(p_at timestamptz default now())
 returns void language plpgsql security definer set search_path = '' as $$
 declare season_record public.fantasy_seasons; expired_at timestamptz; top_points bigint; definition_id uuid;
@@ -406,9 +422,11 @@ revoke execute on function public.start_fantasy_draft(uuid,date,timestamptz) fro
 revoke execute on function public.set_fantasy_preferences(uuid,uuid[]) from public,anon;
 revoke execute on function public.submit_fantasy_pick(uuid,uuid,timestamptz) from public,anon;
 revoke execute on function public.submit_fantasy_waiver(uuid,uuid,uuid,timestamptz) from public,anon;
+revoke execute on function public.start_fantasy_draft(uuid,date,timestamptz),public.submit_fantasy_pick(uuid,uuid,timestamptz),public.submit_fantasy_waiver(uuid,uuid,uuid,timestamptz) from authenticated;
+revoke execute on function public.start_fantasy_draft(uuid,date),public.submit_fantasy_pick(uuid,uuid),public.submit_fantasy_waiver(uuid,uuid,uuid) from public,anon;
 grant execute on function public.fantasy_is_enabled(),public.fantasy_feature_state(),public.my_fantasy_leagues(),public.fantasy_overview(uuid),
-  public.create_fantasy_league(text),public.join_fantasy_league(text),public.start_fantasy_draft(uuid,date,timestamptz),
-  public.set_fantasy_preferences(uuid,uuid[]),public.submit_fantasy_pick(uuid,uuid,timestamptz),public.submit_fantasy_waiver(uuid,uuid,uuid,timestamptz) to authenticated;
+  public.create_fantasy_league(text),public.join_fantasy_league(text),public.start_fantasy_draft(uuid,date),
+  public.set_fantasy_preferences(uuid,uuid[]),public.submit_fantasy_pick(uuid,uuid),public.submit_fantasy_waiver(uuid,uuid,uuid) to authenticated;
 
 revoke execute on function public.require_fantasy_enabled(),public.fantasy_add_business_hours(timestamptz,integer),
   public.fantasy_current_picker(uuid,integer),public.make_fantasy_pick(uuid,uuid,uuid,boolean,timestamptz),

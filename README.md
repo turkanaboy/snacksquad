@@ -1,42 +1,47 @@
 # Snack Squad
 
-Remote-office snack board for suggestions, votes, and comments.
+Private Carnegie Higher Ed snack logging and social competition. Members sign in by company magic link, record daily snacks, upvote coworker entries, follow rolling standings, and play the automated weekly bracket. Badges and Friday reports preserve winners. Monthly fantasy leagues are implemented but remain locked until the pilot gate is deliberately approved.
 
-## Setup
+## Local setup
 
-1. Create a Supabase project and enable anonymous sign-ins in Auth settings.
-2. Copy `.env.example` to `.env.local`.
-3. Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
-4. Apply `supabase/migrations/001_initial_snack_squad.sql` with `supabase db push` or the hosted SQL editor. If the first migration was already run, apply each later numbered migration in order.
-5. Link the project, identify SnackSquad to Open Food Facts, and deploy the lookup function:
+1. Install Node.js, Docker Desktop, and the Supabase CLI dependencies with `npm.cmd install`.
+2. Copy `.env.example` to `.env.local` and add `VITE_SUPABASE_URL` plus `VITE_SUPABASE_PUBLISHABLE_KEY`. Never add a secret or service-role key to the browser app.
+3. Start and reset the disposable local stack:
 
-```bash
-supabase link --project-ref YOUR_PROJECT_REF
-supabase secrets set OPEN_FOOD_FACTS_CONTACT=you@example.com
-supabase functions deploy snack-metadata
+```powershell
+npm.cmd exec -- supabase start
+npm.cmd exec -- supabase db reset --local --yes
+npm.cmd run dev
 ```
 
-6. Install and run:
+4. Open Mailpit at `http://127.0.0.1:54324` to follow local magic links.
 
-```bash
-npm install
-npm test
-npm run typecheck
-npm run build
-npm run dev
+## Verification
+
+```powershell
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run build
+npm.cmd exec -- supabase db lint --local --schema public --level warning --fail-on warning
+npm.cmd exec -- supabase test db --local supabase/tests/database
 ```
 
-## Current Features
+## Hosted services
 
-- Shared snack board with anonymous session ownership and typed display names.
-- Snack suggestions, duplicate nudges, votes, comments, and author-owned cleanup.
-- Open Food Facts name and barcode lookup through an authenticated Supabase Edge Function.
-- Image URL previews, optional source notes, pick of the day, weekly local bracket voting, personal ratings, derived badges, archive view, and CSV export.
+Link the pilot project, apply migrations, configure the Open Food Facts contact, and deploy the authenticated metadata function:
 
-## Guardrails
+```powershell
+npm.cmd exec -- supabase link --project-ref YOUR_PROJECT_REF
+npm.cmd exec -- supabase db push
+npm.cmd exec -- supabase secrets set OPEN_FOOD_FACTS_CONTACT=you@example.com
+npm.cmd exec -- supabase functions deploy snack-metadata
+```
 
-V1 does not include Slack integration, user-facing login, Storage uploads, Realtime, purchasing, stocking, approval workflows, or role-based moderation.
+Complete the exact Auth, SMTP, moderator, Cron, and rollout checks in [docs/auth-setup.md](docs/auth-setup.md) and [docs/pilot-runbook.md](docs/pilot-runbook.md).
 
-Never put a Supabase service-role or secret key in `.env.local` for this browser app.
+## Product guardrails
 
-Magic-link prep lives in `docs/auth-setup.md`; the email template is `docs/magic-link-email.html`.
+- No calorie, serving, quantity, rating, or comment tracking.
+- Personal log history stays private; shared surfaces use narrow database projections.
+- Canonical metadata changes require a moderator; members submit corrections.
+- Fantasy stays disabled until a moderator reviews four weeks of pilot signals and explicitly changes `fantasy_enabled`.
