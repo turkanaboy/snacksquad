@@ -82,7 +82,7 @@ export function HomeScreen({
 
         <button className="contest-strip" onClick={onOpenContests}>
           <span><b>Weekly bracket</b><small>See nominations and active matchups</small></span>
-          <strong>Open contests <span aria-hidden="true">→</span></strong>
+          <strong>Open bracket <span aria-hidden="true">→</span></strong>
         </button>
       </section>
 

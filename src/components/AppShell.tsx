@@ -15,12 +15,13 @@ type Props = {
 const navigation: Array<{ view: AppView; label: string; icon: string }> = [
   { view: "home", label: "Home", icon: "⌂" },
   { view: "log", label: "Log Snack", icon: "+" },
-  { view: "contests", label: "Contests", icon: "♜" },
+  { view: "contests", label: "Bracket", icon: "♜" },
   { view: "profile", label: "Profile", icon: "○" },
 ];
 
 export function AppShell({ view, displayName, email, onNavigate, onSignOut, fantasyEnabled, children }: Props) {
   const desktopNavigation = fantasyEnabled ? [...navigation.slice(0, 3), { view: "fantasy" as const, label: "Fantasy", icon: "▣" }, navigation[3]] : navigation;
+  const mobileNavigation = fantasyEnabled ? desktopNavigation : navigation;
   return (
     <div className="app-frame">
       <a className="skip-link" href="#main-content">Skip to content</a>
@@ -53,11 +54,11 @@ export function AppShell({ view, displayName, email, onNavigate, onSignOut, fant
       </aside>
       <main id="main-content" className="main-stage">{children}</main>
       <nav className="mobile-nav" aria-label="Primary navigation">
-        {navigation.map((item) => (
+        {mobileNavigation.map((item) => (
           <button
             key={item.view}
-            className={view === item.view || (view === "fantasy" && item.view === "contests") ? "mobile-nav-item selected" : "mobile-nav-item"}
-            aria-current={view === item.view || (view === "fantasy" && item.view === "contests") ? "page" : undefined}
+            className={view === item.view ? "mobile-nav-item selected" : "mobile-nav-item"}
+            aria-current={view === item.view ? "page" : undefined}
             onClick={() => onNavigate(item.view)}
           >
             <span aria-hidden="true">{item.icon}</span>

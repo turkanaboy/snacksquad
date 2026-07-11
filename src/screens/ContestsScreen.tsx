@@ -1,24 +1,21 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { BadgeHistory } from "../components/BadgeHistory";
 import { Bracket } from "../components/Bracket";
 import {
-  castBracketVote, getCurrentContestOverview, getProfileBadges, getWeeklyReports,
-  nominateBracketSnack, type BadgeTenure, type ContestMatchup, type ContestOverview, type WeeklyReport,
+  castBracketVote, getCurrentContestOverview, nominateBracketSnack,
+  type ContestMatchup, type ContestOverview,
 } from "../contestStore";
 import { friendlyError } from "../errors";
 import { createSupabaseSnackSearch, saveSelectedSnack, type SnackMetadata } from "../snackMetadata";
 
-type Props = { client: SupabaseClient; currentUserId: string; fantasyEnabled: boolean; onOpenFantasy: () => void };
+type Props = { client: SupabaseClient; currentUserId: string };
 
 function weekLabel(value: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(`${value}T12:00:00`));
 }
 
-export function ContestsScreen({ client, currentUserId, fantasyEnabled, onOpenFantasy }: Props) {
+export function ContestsScreen({ client, currentUserId }: Props) {
   const [overview, setOverview] = useState<ContestOverview | null>(null);
-  const [reports, setReports] = useState<WeeklyReport[]>([]);
-  const [badges, setBadges] = useState<BadgeTenure[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyMatchupId, setBusyMatchupId] = useState("");
@@ -30,19 +27,15 @@ export function ContestsScreen({ client, currentUserId, fantasyEnabled, onOpenFa
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextOverview, nextReports, nextBadges] = await Promise.all([
-        getCurrentContestOverview(client), getWeeklyReports(client), getProfileBadges(client, currentUserId),
-      ]);
+      const nextOverview = await getCurrentContestOverview(client);
       setOverview(nextOverview);
-      setReports(nextReports);
-      setBadges(nextBadges);
       setError("");
     } catch (loadError) {
       setError(friendlyError(loadError));
     } finally {
       setLoading(false);
     }
-  }, [client, currentUserId]);
+  }, [client]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -108,7 +101,7 @@ export function ContestsScreen({ client, currentUserId, fantasyEnabled, onOpenFa
 
       {overview?.week.status === "nominations" ? (
         <section className="nomination-desk" aria-labelledby="nomination-title">
-          <div className="nomination-copy"><span className="desk-number">01</span><div><h2 id="nomination-title">Your nomination</h2><p>Duplicate picks merge into one entry with shared ownership.</p></div></div>
+          <div className="nomination-copy"><h2 id="nomination-title">Your nomination</h2><p>Duplicate picks merge into one entry with shared ownership.</p></div>
           {myEntry ? (
             <div className="my-nomination"><span>Nominated</span><b>{myEntry.snackName}</b><small>{myEntry.ownerIds.length > 1 ? `${myEntry.ownerIds.length} co-owners so far` : "You own this entry"}</small></div>
           ) : (
@@ -136,12 +129,6 @@ export function ContestsScreen({ client, currentUserId, fantasyEnabled, onOpenFa
         </section>
       ) : null}
 
-      <section className="contest-lower-grid">
-        <div className="report-panel"><div className="section-heading"><div><h2>Friday reports</h2><p>Frozen weekly results, kept on the record.</p></div></div>{reports.length ? reports.map((report) => <ReportRow key={report.weekId} report={report} />) : <p className="empty-state">The first report publishes Friday.</p>}</div>
-        <div className="badge-panel"><div className="section-heading"><div><h2>Your badge tenures</h2><p>Current runs stay open until dethroned.</p></div></div><BadgeHistory badges={badges} /></div>
-      </section>
-
-      <section className="fantasy-lock"><span className="desk-number">03</span><div><p className="section-label">Fantasy league</p><h2>{fantasyEnabled ? "The draft room is open." : "Locked for the pilot."}</h2><p>{fantasyEnabled ? "Create or join a private monthly league." : "Fantasy opens only after four weeks of healthy participation."}</p></div><button className={fantasyEnabled ? "primary-button" : "secondary-button"} onClick={onOpenFantasy}>{fantasyEnabled ? "Open fantasy" : "View pilot gate"}</button></section>
     </div>
   );
 }
@@ -150,9 +137,4 @@ function Champion({ overview }: { overview: ContestOverview }) {
   const champion = overview.entries.find((entry) => entry.id === overview.week.championEntryId);
   if (!champion) return null;
   return <div className="champion-strip"><span>Champion</span><b>{champion.snackName}</b><small>{champion.ownerIds.length ? `${champion.ownerIds.length} badge ${champion.ownerIds.length === 1 ? "recipient" : "recipients"}` : "Leaderboard fill — no owner badge"}</small></div>;
-}
-
-function ReportRow({ report }: { report: WeeklyReport }) {
-  const leader = report.leaderboard[0];
-  return <article className="report-row"><time dateTime={report.reportDate}>{weekLabel(report.reportDate)}</time><span><b>{leader?.snackName || "No activity winner"}</b><small>{leader ? `${leader.upvoteCount} upvotes · ${leader.logCount} logs` : "No qualifying activity"}</small></span><strong>{report.bracketChampionEntryId ? "Bracket final" : "Standings"}</strong></article>;
 }

@@ -95,7 +95,7 @@ The component system is deliberately small:
 
 - **Desktop (960px and above):** Persistent 176px navigation rail, fluid activity column, and 280-320px Top 10 rail. Contest state anchors below activity rather than becoming another equal card.
 - **Tablet (760-959px):** Navigation rail narrows; Top 10 becomes a horizontal strip below activity.
-- **Mobile (below 760px):** Four-item bottom navigation (Home, Log, Contests, Profile), compact header, stacked activity, horizontal Top 10 preview, and no separate Fantasy navigation item.
+- **Mobile (below 760px):** Bottom navigation uses Home, Log, Bracket, and Profile, adding Fantasy as its own destination only after the feature is enabled. Keep the compact header, stacked activity, and horizontal Top 10 preview.
 
 ### Imagery
 
@@ -105,7 +105,7 @@ Use HTTPS package photography or clean product imagery with `object-fit: contain
 
 Routine feedback uses explicit 120-200ms opacity, color, border-color, or transform transitions with ease-out. Pressed controls may scale to 0.98. Popovers originate from their trigger. Navigation and keyboard actions do not animate, and `prefers-reduced-motion` removes nonessential transitions.
 
-Do not treat the probe's downvote buttons, comment counts, invented clubs, three-item mobile navigation, or sports-score styling as product components. Snack Squad is upvote-only, has no comments, and mobile navigation must include Home, Log, Contests, and Profile.
+Do not treat the probe's downvote buttons, comment counts, invented clubs, three-item mobile navigation, or sports-score styling as product components. Snack Squad is upvote-only, has no comments, and mobile navigation must include Home, Log, Bracket, and Profile, plus Fantasy once enabled.
 
 ## Do's and Don'ts
 
