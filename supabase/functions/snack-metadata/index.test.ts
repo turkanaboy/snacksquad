@@ -11,11 +11,12 @@ const originalFetch = globalThis.fetch;
 const originalConsoleError = console.error;
 console.error = () => {};
 const calls: Array<{ url: string; options?: RequestInit }> = [];
-let fetchMode: "success" | "rate-limit" | "timeout" | "malformed" = "success";
+let fetchMode: "success" | "rate-limit" | "server-error" | "timeout" | "malformed" = "success";
 globalThis.fetch = async (input, options) => {
   const url = String(input);
   calls.push({ url, options });
   if (fetchMode === "rate-limit") return Response.json({}, { status: 429 });
+  if (fetchMode === "server-error") return Response.json({}, { status: 502 });
   if (fetchMode === "timeout") throw new DOMException("Timed out", "TimeoutError");
   if (fetchMode === "malformed") return Response.json({ hits: "not-an-array" });
   return Response.json(url.includes("/api/v3.6/product/")
@@ -65,25 +66,40 @@ assert.equal((await handler(new Request("http://localhost/snack-metadata", {
 }))).status, 401);
 
 fetchMode = "rate-limit";
-assert.equal((await handler(new Request("http://localhost/snack-metadata", {
+const rateLimitResponse = await handler(new Request("http://localhost/snack-metadata", {
   method: "POST",
   headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
   body: JSON.stringify({ query: "chips" }),
-}))).status, 429);
+}));
+assert.equal(rateLimitResponse.status, 200);
+assert.deepEqual(await rateLimitResponse.json(), { products: [], unavailable: true });
+
+fetchMode = "server-error";
+const serverErrorResponse = await handler(new Request("http://localhost/snack-metadata", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
+  body: JSON.stringify({ query: "chips" }),
+}));
+assert.equal(serverErrorResponse.status, 200);
+assert.deepEqual(await serverErrorResponse.json(), { products: [], unavailable: true });
 
 fetchMode = "timeout";
-assert.equal((await handler(new Request("http://localhost/snack-metadata", {
+const timeoutResponse = await handler(new Request("http://localhost/snack-metadata", {
   method: "POST",
   headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
   body: JSON.stringify({ query: "chips" }),
-}))).status, 502);
+}));
+assert.equal(timeoutResponse.status, 200);
+assert.deepEqual(await timeoutResponse.json(), { products: [], unavailable: true });
 
 fetchMode = "malformed";
-assert.equal((await handler(new Request("http://localhost/snack-metadata", {
+const malformedResponse = await handler(new Request("http://localhost/snack-metadata", {
   method: "POST",
   headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
   body: JSON.stringify({ query: "chips" }),
-}))).status, 502);
+}));
+assert.equal(malformedResponse.status, 200);
+assert.deepEqual(await malformedResponse.json(), { products: [], unavailable: true });
 
 globalThis.fetch = originalFetch;
 console.error = originalConsoleError;

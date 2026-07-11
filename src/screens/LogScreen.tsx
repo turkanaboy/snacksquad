@@ -39,7 +39,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
     400,
     () => {
       setSearching(false);
-      setSearchError("Remote lookup is unavailable. Local snacks and manual entry still work.");
+      setSearchError("Live product search is temporarily unavailable. You can still log this snack manually below or search by barcode.");
     },
   ), [client]);
 
@@ -137,7 +137,9 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
             );
           })}
           {!searching && query.trim().length >= 2 && results.length === 0 ? (
-            <p className="empty-state">No catalog match yet. Add it manually below.</p>
+            <p className="empty-state">
+              {searchError ? `Enter “${query.trim()}” below to log it manually.` : "No catalog match yet. Add it manually below."}
+            </p>
           ) : null}
         </div>
       </section>
