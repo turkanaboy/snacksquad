@@ -171,8 +171,9 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
 .catalog-search h2, .manual-entry h2, .correction-form h2, .profile-section h2 { margin-bottom: 8px; }
 .search-field { position: relative; display: block; }
 .search-field > span { position: absolute; z-index: 1; top: 50%; left: 18px; transform: translateY(-50%); font-size: 1.8rem; }
-.search-field input { min-height: 66px; padding-left: 58px; border-color: #5f7cff; background: var(--cobalt); font-size: 1.2rem; font-weight: 750; }
+.search-field input { min-height: 66px; padding-left: 58px; padding-right: 112px; border-color: #5f7cff; background: var(--cobalt); font-size: 1.2rem; font-weight: 750; }
 .search-field input::placeholder { color: rgba(244,246,242,.82); }
+.search-field button { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); }
 .search-status, .warning-message { margin: 10px 0 0; color: var(--receipt); }
 .warning-message { color: var(--yellow); }
 .search-results { margin-top: 14px; border: var(--rule); }
@@ -236,7 +237,8 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
 .desk-number { color: var(--cobalt); font-family: "Arial Narrow", sans-serif; font-size: 2.6rem; font-weight: 900; line-height: 1; }
 .nomination-copy h2, .fantasy-lock h2 { margin-bottom: 5px; }
 .nomination-copy p, .fantasy-lock p { margin: 0; color: var(--receipt); }
-.nomination-search label { display: block; margin-bottom: 8px; }
+.nomination-search form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.nomination-search label { grid-column: 1 / -1; display: block; }
 .nomination-search > p { margin: 8px 0 0; color: var(--receipt); }
 .nomination-results { max-height: 270px; margin: 8px 0 0; padding: 0; overflow-y: auto; list-style: none; border: var(--rule); background: var(--board); }
 .nomination-results li { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 66px; padding: 9px 12px; border-bottom: var(--rule); }
@@ -317,6 +319,7 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
 .draft-board li:last-child,.fantasy-search li:last-child,.standings li:last-child,.my-roster li:last-child { border-bottom:0; }
 .draft-board small,.fantasy-search small,.my-roster small { color:var(--receipt); }
 .draft-actions { display:grid; align-content:start; gap:14px; }
+.draft-actions form,.my-roster form { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:8px; }
 .fantasy-search li { grid-template-columns:minmax(0,1fr) auto; }
 .preference-queue { display:grid; gap:12px; }
 .preference-queue ol { padding:12px 12px 12px 36px; }

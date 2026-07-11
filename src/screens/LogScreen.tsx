@@ -33,10 +33,8 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
     client,
     (_currentQuery, products) => {
       setResults(products);
-      setSearching(false);
       setSearchError("");
     },
-    400,
     () => {
       setSearching(false);
       setSearchError("Live product search is temporarily unavailable. You can still log this snack manually below or search by barcode.");
@@ -48,8 +46,17 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
   useEffect(() => {
     setManualName(query);
     setSearching(Boolean(query.trim()));
-    void search.search(query);
+    void search.search(query).finally(() => setSearching(false));
   }, [query, search]);
+
+  async function submitSearch(event: FormEvent) {
+    event.preventDefault();
+    if (query.trim().length < 3) return;
+    setSearching(true);
+    setSearchError("");
+    await search.searchRemote(query);
+    setSearching(false);
+  }
 
   async function log(snack: SnackMetadata, key: string) {
     setBusyKey(key);
@@ -102,16 +109,18 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
 
       <section className="catalog-search" aria-labelledby="catalog-title">
         <h2 id="catalog-title">Find your snack</h2>
-        <label className="search-field">
+        <form className="search-field" onSubmit={submitSearch}>
           <span aria-hidden="true">⌕</span>
           <input
             type="search"
+            aria-label="Brand, product, or barcode"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Brand, product, or barcode"
             autoFocus
           />
-        </label>
+          <button className="primary-button compact" disabled={searching || query.trim().length < 3}>{searching ? "Searching…" : "Search"}</button>
+        </form>
         {searching ? <p className="search-status" role="status">Searching known snacks…</p> : null}
         {searchError ? <p className="warning-message" role="status">{searchError}</p> : null}
         <div id="snack-results" className="search-results" aria-live="polite" aria-label="Snack results">

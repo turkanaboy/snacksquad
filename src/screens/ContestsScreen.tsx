@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BadgeHistory } from "../components/BadgeHistory";
 import { Bracket } from "../components/Bracket";
@@ -48,8 +48,7 @@ export function ContestsScreen({ client, currentUserId, fantasyEnabled, onOpenFa
 
   const search = useMemo(() => createSupabaseSnackSearch(
     client,
-    (_query, products) => { setNominationResults(products); setSearching(false); },
-    400,
+    (_query, products) => { setNominationResults(products); },
     () => { setSearching(false); setError("Catalog search is unavailable right now."); },
   ), [client]);
 
@@ -57,8 +56,16 @@ export function ContestsScreen({ client, currentUserId, fantasyEnabled, onOpenFa
   useEffect(() => {
     if (nominationQuery.trim().length < 2) { setNominationResults([]); setSearching(false); return; }
     setSearching(true);
-    void search.search(nominationQuery);
+    void search.search(nominationQuery).finally(() => setSearching(false));
   }, [nominationQuery, search]);
+
+  async function submitNominationSearch(event: FormEvent) {
+    event.preventDefault();
+    if (nominationQuery.trim().length < 3) return;
+    setSearching(true);
+    await search.searchRemote(nominationQuery);
+    setSearching(false);
+  }
 
   const myEntry = overview?.entries.find((entry) => entry.ownerIds.includes(currentUserId));
 
@@ -107,8 +114,11 @@ export function ContestsScreen({ client, currentUserId, fantasyEnabled, onOpenFa
             <div className="my-nomination"><span>Nominated</span><b>{myEntry.snackName}</b><small>{myEntry.ownerIds.length > 1 ? `${myEntry.ownerIds.length} co-owners so far` : "You own this entry"}</small></div>
           ) : (
             <div className="nomination-search">
-              <label htmlFor="nomination-search">Find a canonical snack</label>
-              <input id="nomination-search" type="search" value={nominationQuery} onChange={(event) => setNominationQuery(event.target.value)} placeholder="Brand or product" />
+              <form onSubmit={submitNominationSearch}>
+                <label htmlFor="nomination-search">Find a canonical snack</label>
+                <input id="nomination-search" type="search" value={nominationQuery} onChange={(event) => setNominationQuery(event.target.value)} placeholder="Brand or product" />
+                <button className="secondary-button compact" disabled={searching || nominationQuery.trim().length < 3}>{searching ? "Searching…" : "Search"}</button>
+              </form>
               {searching ? <p role="status">Searching…</p> : null}
               {nominationResults.length ? <ul className="nomination-results" aria-live="polite">{nominationResults.map((snack, index) => {
                 const key = snack.id || snack.barcode || `${snack.name}-${index}`;

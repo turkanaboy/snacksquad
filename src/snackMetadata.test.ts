@@ -54,21 +54,23 @@ const search = createSnackSearch({
   },
 }, (query, products) => {
   searchEvents.push({ query, names: products.map((product) => product.name) });
-}, 5);
+});
 
 await search.search("ch");
-await new Promise((resolve) => setTimeout(resolve, 10));
 assert.deepEqual(searchCalls, []);
 assert.deepEqual(searchEvents.at(-1), { query: "ch", names: ["Local ch"] });
 
 const firstSearch = search.search("chee");
 const finalSearch = search.search("cheez");
 await Promise.all([firstSearch, finalSearch]);
-await new Promise((resolve) => setTimeout(resolve, 15));
+assert.deepEqual(searchCalls, []);
+assert.deepEqual(searchEvents.at(-1), { query: "cheez", names: ["Local cheez"] });
+
+await search.searchRemote("cheez");
 assert.deepEqual(searchCalls, ["cheez"]);
 assert.deepEqual(searchEvents.at(-1), { query: "cheez", names: ["Local cheez", "Remote cheez"] });
 
-await search.search("3017624010701");
+await search.searchRemote("3017624010701");
 assert.equal(searchCalls.at(-1), "3017624010701");
 search.dispose();
 
@@ -132,16 +134,14 @@ const outageSearch = createSnackSearch({
     outageCalls.push(query);
     throw new Error("Remote unavailable");
   },
-}, () => {}, 1, (query) => outageErrors.push(query), 60_000);
+}, () => {}, (query) => outageErrors.push(query), 60_000);
 
-await outageSearch.search("pretzel");
-await new Promise((resolve) => setTimeout(resolve, 5));
-await outageSearch.search("cheese");
-await new Promise((resolve) => setTimeout(resolve, 5));
+await outageSearch.searchRemote("pretzel");
+await outageSearch.searchRemote("cheese");
 assert.deepEqual(outageCalls, ["pretzel"]);
 assert.deepEqual(outageErrors, ["pretzel", "cheese"]);
 
-await outageSearch.search("3017624010701");
+await outageSearch.searchRemote("3017624010701");
 assert.deepEqual(outageCalls, ["pretzel", "3017624010701"]);
 outageSearch.dispose();
 
