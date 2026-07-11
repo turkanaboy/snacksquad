@@ -6,7 +6,7 @@
 - Apply the schema and compatible frontend in the same pilot window with `npm.cmd exec -- supabase db push`.
 - Run `npm.cmd exec -- supabase migration list` and confirm local and linked histories match.
 - Configure the Auth hook, exact redirect URLs, custom SMTP, and anonymous-sign-in setting in [auth-setup.md](auth-setup.md).
-- Set `OPEN_FOOD_FACTS_CONTACT` and deploy `snack-metadata`.
+- Set `USDA_API_KEY` and deploy `snack-metadata`.
 - Add at least one moderator in `public.moderators` after their first login.
 - Confirm the `snack-squad-competition-reconciler` Cron job runs every five minutes without errors.
 - Keep `public.feature_flags.fantasy_enabled = false` for launch.
@@ -31,7 +31,7 @@ Use two eligible company accounts and one ineligible external address.
 - Bracket automation: Monday Round of 16, Tuesday quarterfinals, Wednesday semifinals, Thursday final; rounds close at 5:00 PM Eastern and tied matches use the bounded sudden-death rule.
 - Friday reports publish at 9:00 AM Eastern and snapshot standings, category winners, bracket champion, and badge changes.
 - Monitor Cron history, Auth hook failures, Edge Function errors, and Supabase security/performance advisors during the pilot.
-- Catalog or Open Food Facts outages must not block manual entries.
+- Catalog or USDA FoodData Central outages must not block manual entries.
 
 ## Fantasy unlock review
 
