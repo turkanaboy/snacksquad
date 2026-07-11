@@ -46,7 +46,7 @@ set enabled = true,
 where key = 'fantasy_enabled';
 ```
 
-Recheck the desktop Fantasy navigation, mobile Contests entry, four-to-eight-manager limits, catalog preflight, draft clock, and Friday waiver before announcing the unlock.
+Recheck the desktop and mobile Fantasy navigation, four-to-eight-manager limits, catalog preflight, draft clock, and Friday waiver before announcing the unlock.
 
 ## Rollback
 

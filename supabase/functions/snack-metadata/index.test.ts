@@ -57,8 +57,8 @@ assert.equal(new URL(calls[0].url).searchParams.get("api_key"), "test-usda-key")
 assert.equal(calls[0].options?.method, "POST");
 assert.deepEqual(JSON.parse(String(calls[0].options?.body)), {
   query: "Cheez-It",
-  dataType: ["Branded"],
-  pageSize: 8,
+  dataType: ["Foundation", "Branded"],
+  pageSize: 25,
 });
 assert(calls[0].options?.signal instanceof AbortSignal);
 
@@ -75,6 +75,11 @@ assert.deepEqual(await barcodeResponse.json(), {
     sourceUrl: "https://fdc.nal.usda.gov/fdc-app.html#/food-details/3/nutrients",
     nutritionComplete: false,
   }],
+});
+assert.deepEqual(JSON.parse(String(calls[1].options?.body)), {
+  query: "3017624010701",
+  dataType: ["Branded"],
+  pageSize: 8,
 });
 
 assert.equal((await handler(new Request("http://localhost/snack-metadata", {
