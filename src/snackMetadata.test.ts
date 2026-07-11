@@ -113,4 +113,36 @@ await assert.rejects(
   /Could not search snack metadata yet/,
 );
 
+await assert.rejects(
+  () => searchSnackMetadata({
+    functions: {
+      async invoke() {
+        return { data: { products: [], unavailable: true }, error: null };
+      },
+    },
+  }, "chips"),
+  /temporarily unavailable/,
+);
+
+const outageCalls: string[] = [];
+const outageErrors: string[] = [];
+const outageSearch = createSnackSearch({
+  local: async () => [],
+  remote: async (query) => {
+    outageCalls.push(query);
+    throw new Error("Remote unavailable");
+  },
+}, () => {}, 1, (query) => outageErrors.push(query), 60_000);
+
+await outageSearch.search("pretzel");
+await new Promise((resolve) => setTimeout(resolve, 5));
+await outageSearch.search("cheese");
+await new Promise((resolve) => setTimeout(resolve, 5));
+assert.deepEqual(outageCalls, ["pretzel"]);
+assert.deepEqual(outageErrors, ["pretzel", "cheese"]);
+
+await outageSearch.search("3017624010701");
+assert.deepEqual(outageCalls, ["pretzel", "3017624010701"]);
+outageSearch.dispose();
+
 console.log("snack metadata tests passed");

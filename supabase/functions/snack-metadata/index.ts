@@ -60,21 +60,18 @@ Deno.serve(async (request) => {
     });
 
     if (!response.ok) {
-      return json(
-        { error: response.status === 429 ? "Snack lookup is busy. Try again shortly." : "Snack lookup is unavailable." },
-        response.status === 429 ? 429 : 502,
-      );
+      return json({ products: [], unavailable: true });
     }
 
     const data = await response.json() as {
       product?: OpenFoodFactsProduct;
       hits?: unknown;
     };
-    if (!barcode && !Array.isArray(data.hits)) return json({ error: "Snack lookup returned an invalid response." }, 502);
+    if (!barcode && !Array.isArray(data.hits)) return json({ products: [], unavailable: true });
     const products = barcode ? (data.product ? [data.product] : []) : data.hits as OpenFoodFactsProduct[];
     return json({ products: mapOpenFoodFactsProducts(products, cleanedQuery) });
   } catch (error) {
     console.error("Open Food Facts request failed", error);
-    return json({ error: "Snack lookup is unavailable." }, 502);
+    return json({ products: [], unavailable: true });
   }
 });

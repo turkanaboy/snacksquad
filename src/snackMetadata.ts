@@ -52,7 +52,12 @@ export async function searchSnackMetadata(client: MetadataClient, query: string)
   const { data, error } = await client.functions.invoke("snack-metadata", { body: { query: q } });
   if (error) throw new Error("Could not search snack metadata yet.");
 
-  const products = (data as { products?: unknown } | null)?.products;
+  const response = data as { products?: unknown; unavailable?: unknown } | null;
+  if (response?.unavailable === true) {
+    throw new Error("Live snack search is temporarily unavailable.");
+  }
+
+  const products = response?.products;
   if (!Array.isArray(products)) throw new Error("Could not search snack metadata yet.");
   return products.filter(isSnackMetadata);
 }
@@ -79,9 +84,12 @@ export function createSnackSearch(
   onResults: (query: string, products: SnackMetadata[]) => void,
   delayMs = 400,
   onError: (query: string, error: unknown) => void = () => {},
+  outageCooldownMs = 60_000,
 ) {
   let version = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let nameSearchRetryAt = 0;
+  let lastNameSearchError: unknown;
 
   async function search(value: string): Promise<void> {
     const query = value.trim();
@@ -100,11 +108,24 @@ export function createSnackSearch(
     const isBarcode = /^\d{8,14}$/.test(query);
     if (!isBarcode && query.length < 3) return;
 
+    if (!isBarcode && Date.now() < nameSearchRetryAt) {
+      onError(query, lastNameSearchError);
+      return;
+    }
+
     const addRemote = async () => {
       try {
         const remote = await source.remote(query);
+        if (!isBarcode) {
+          nameSearchRetryAt = 0;
+          lastNameSearchError = undefined;
+        }
         if (currentVersion === version) onResults(query, mergeSnackMetadata(local, remote));
       } catch (error) {
+        if (!isBarcode) {
+          nameSearchRetryAt = Date.now() + outageCooldownMs;
+          lastNameSearchError = error;
+        }
         if (currentVersion === version) onError(query, error);
       }
     };
