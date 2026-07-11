@@ -21,8 +21,8 @@
 
 - [x] Add optional image URL preview validation.
 - [x] Add simple duplicate suggestions beyond exact normalized names.
-- [x] Add Open Food Facts lookup adapter skeleton.
-- [x] Route Open Food Facts lookup through an authenticated Supabase Edge Function.
+- [x] Add a USDA FoodData Central lookup adapter.
+- [x] Route USDA FoodData Central lookup through an authenticated Supabase Edge Function.
 
 ## Culture Features
 

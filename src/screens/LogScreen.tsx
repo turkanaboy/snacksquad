@@ -38,7 +38,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
     },
     () => {
       setSearching(false);
-      setSearchError("Live product search is temporarily unavailable. You can still log this snack manually below or search by barcode.");
+      setSearchError("Live product search is temporarily unavailable. Try again shortly or log this snack manually below.");
     },
   ), [client]);
 

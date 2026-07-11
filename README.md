@@ -5,8 +5,9 @@ Private Carnegie Higher Ed snack logging and social competition. Members sign in
 ## Local setup
 
 1. Install Node.js, Docker Desktop, and the Supabase CLI dependencies with `npm.cmd install`.
-2. Copy `.env.example` to `.env.local` and add `VITE_SUPABASE_URL` plus `VITE_SUPABASE_PUBLISHABLE_KEY`. Never add a secret or service-role key to the browser app.
-3. Start and reset the disposable local stack:
+2. Copy `.env.example` to `.env.local` and add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
+3. Copy `supabase/functions/.env.example` to `supabase/functions/.env` and add the server-only `USDA_API_KEY`. Never prefix the USDA key with `VITE_` or expose a secret/service-role key to the browser app.
+4. Start and reset the disposable local stack:
 
 ```powershell
 npm.cmd exec -- supabase start
@@ -14,7 +15,7 @@ npm.cmd exec -- supabase db reset --local --yes
 npm.cmd run dev
 ```
 
-4. Open Mailpit at `http://127.0.0.1:54324` to follow local magic links.
+5. Open Mailpit at `http://127.0.0.1:54324` to follow local magic links.
 
 ## Verification
 
@@ -28,12 +29,12 @@ npm.cmd exec -- supabase test db --local supabase/tests/database
 
 ## Hosted services
 
-Link the pilot project, apply migrations, configure the Open Food Facts contact, and deploy the authenticated metadata function:
+Link the pilot project, apply migrations, configure USDA FoodData Central, and deploy the authenticated metadata function:
 
 ```powershell
 npm.cmd exec -- supabase link --project-ref YOUR_PROJECT_REF
 npm.cmd exec -- supabase db push
-npm.cmd exec -- supabase secrets set OPEN_FOOD_FACTS_CONTACT=you@example.com
+npm.cmd exec -- supabase secrets set USDA_API_KEY=your-data-gov-key
 npm.cmd exec -- supabase functions deploy snack-metadata
 ```
 

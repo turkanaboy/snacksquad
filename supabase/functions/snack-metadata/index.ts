@@ -1,4 +1,4 @@
-import { mapOpenFoodFactsProducts, type OpenFoodFactsProduct } from "./product.ts";
+import { mapUsdaFoods, normalizeGtin, type UsdaFood } from "./product.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,24 +7,7 @@ const corsHeaders = {
 };
 
 function json(body: unknown, status = 200) {
-  return Response.json(body, {
-    status,
-    headers: corsHeaders,
-  });
-}
-
-function openFoodFactsUrl(query: string) {
-  if (/^\d{8,14}$/.test(query)) {
-    const url = new URL(`https://world.openfoodfacts.org/api/v3.6/product/${query}.json`);
-    url.searchParams.set("fields", "code,product_name,generic_name,brands,categories,categories_tags,image_url,url,nutrition_grades,nutriments");
-    return { url, barcode: true };
-  }
-
-  const url = new URL("https://search.openfoodfacts.org/search");
-  url.searchParams.set("q", query);
-  url.searchParams.set("page_size", "3");
-  url.searchParams.set("fields", "code,product_name,generic_name,brands,categories,categories_tags,image_url,url,nutrition_grades,nutriments");
-  return { url, barcode: false };
+  return Response.json(body, { status, headers: corsHeaders });
 }
 
 Deno.serve(async (request) => {
@@ -46,32 +29,35 @@ Deno.serve(async (request) => {
     return json({ error: "Query must be between 1 and 100 characters." }, 400);
   }
 
-  const contact = Deno.env.get("OPEN_FOOD_FACTS_CONTACT")?.trim();
-  if (!contact) return json({ error: "Open Food Facts contact is not configured." }, 503);
+  const apiKey = Deno.env.get("USDA_API_KEY")?.trim();
+  if (!apiKey) return json({ error: "USDA FoodData Central is not configured." }, 503);
 
-  const { url, barcode } = openFoodFactsUrl(cleanedQuery);
+  const url = new URL("https://api.nal.usda.gov/fdc/v1/foods/search");
+  url.searchParams.set("api_key", apiKey);
+
   try {
     const response = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": `SnackSquad/0.1 (${contact})`,
-      },
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ query: cleanedQuery, dataType: ["Branded"], pageSize: 8 }),
       signal: AbortSignal.timeout(8_000),
     });
 
     if (!response.ok) {
+      console.warn(`USDA FoodData Central returned HTTP ${response.status}`);
       return json({ products: [], unavailable: true });
     }
 
-    const data = await response.json() as {
-      product?: OpenFoodFactsProduct;
-      hits?: unknown;
-    };
-    if (!barcode && !Array.isArray(data.hits)) return json({ products: [], unavailable: true });
-    const products = barcode ? (data.product ? [data.product] : []) : data.hits as OpenFoodFactsProduct[];
-    return json({ products: mapOpenFoodFactsProducts(products, cleanedQuery) });
+    const data = await response.json() as { foods?: unknown };
+    if (!Array.isArray(data.foods)) return json({ products: [], unavailable: true });
+    let foods = data.foods.filter((food): food is UsdaFood => Boolean(food && typeof food === "object" && !Array.isArray(food)));
+    if (/^\d{8,14}$/.test(cleanedQuery)) {
+      const normalizedQuery = normalizeGtin(cleanedQuery);
+      foods = foods.filter((food) => normalizeGtin(food.gtinUpc) === normalizedQuery);
+    }
+    return json({ products: mapUsdaFoods(foods, cleanedQuery) });
   } catch (error) {
-    console.error("Open Food Facts request failed", error);
+    console.error("USDA FoodData Central request failed", error);
     return json({ products: [], unavailable: true });
   }
 });
