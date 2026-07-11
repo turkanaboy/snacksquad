@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type SnackMetadata = {
   id?: string;
+  providerId?: string;
   name: string;
   brand?: string;
   category?: string;
@@ -27,16 +28,11 @@ export type SnackSearchSource = {
   remote(query: string): Promise<SnackMetadata[]>;
 };
 
-const snackCategories = new Set([
-  "Grains/Bakery", "Protein", "Dairy", "Fruit", "Vegetables", "Candy/Sweets",
-  "Chips/Savory Snacks", "Beverages", "Other",
-]);
-
 type MetadataClient = {
   functions: {
     invoke(
       name: string,
-      options: { body: { query: string } },
+      options: { body: { query: string } | { importId: string } },
     ): Promise<{ data: unknown; error: { message?: string } | null }>;
   };
 };
@@ -98,7 +94,13 @@ export function createSnackSearch(
       return;
     }
 
-    const local = await source.local(query);
+    let local: SnackMetadata[];
+    try {
+      local = await source.local(query);
+    } catch (error) {
+      if (currentVersion === version) onError(query, error);
+      return;
+    }
     if (currentVersion !== version) return;
     onResults(query, local);
     if (!includeRemote) return;
@@ -136,28 +138,16 @@ export function createSnackSearch(
   };
 }
 
-export function toCatalogSnackParams(product: SnackMetadata) {
-  return {
-    p_name: product.name.trim().replace(/\s+/g, " ").slice(0, 160),
-    p_brand: product.brand?.trim().slice(0, 160) || null,
-    p_barcode: product.barcode || null,
-    p_category: snackCategories.has(product.category || "") ? product.category : "Other",
-    p_source_categories: product.sourceCategories?.slice(0, 30) || [],
-    p_image_url: product.imageUrl || null,
-    p_source_url: product.sourceUrl || null,
-    p_nutri_score: product.nutriScore || null,
-    p_nutrition_complete: product.nutritionComplete || false,
-  };
-}
-
 export async function saveSelectedSnack(
-  client: Pick<SupabaseClient, "rpc">,
+  client: Pick<SupabaseClient, "functions">,
   product: SnackMetadata,
 ): Promise<string> {
-  const result = await client.rpc("upsert_catalog_snack", toCatalogSnackParams(product));
-  if (result.error) throw result.error;
-  if (typeof result.data !== "string") throw new Error("Could not save the selected snack.");
-  return result.data;
+  if (!product.providerId) throw new Error("Choose a verified catalog result or add the snack manually.");
+  const result = await client.functions.invoke("snack-metadata", { body: { importId: product.providerId } });
+  if (result.error) throw new Error("Could not save the selected snack.");
+  const snackId = (result.data as { snackId?: unknown } | null)?.snackId;
+  if (typeof snackId !== "string") throw new Error("Could not save the selected snack.");
+  return snackId;
 }
 
 export async function searchLocalSnacks(

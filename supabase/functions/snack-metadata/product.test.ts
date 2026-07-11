@@ -22,6 +22,7 @@ assert.deepEqual(mapUsdaFoods([{
   foodCategory: "Chips, Pretzels & Snacks",
   foodNutrients: completeNutrients,
 }], "pretzel"), [{
+  providerId: "1234567",
   name: "PRETZELS, ORIGINAL",
   brand: "Snack Co",
   category: "Chips/Savory Snacks",

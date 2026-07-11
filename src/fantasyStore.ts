@@ -13,6 +13,18 @@ export type FantasyOverview = {
   standings: Array<{ userId: string; points: number }>;
 };
 
+export function easternMonthStart(value = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(value);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  if (!year || !month) throw new Error("Could not determine the Eastern month.");
+  return `${year}-${month}-01`;
+}
+
 export async function getFantasyFeatureState(client: RpcClient): Promise<FantasyFeatureState> {
   const result = await client.rpc("fantasy_feature_state"); if (result.error) throw result.error;
   return result.data as FantasyFeatureState;

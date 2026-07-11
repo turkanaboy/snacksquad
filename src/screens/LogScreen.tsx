@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseSnackSearch, type SnackMetadata } from "../snackMetadata";
+import { friendlyError } from "../errors";
 
 const categories = [
   "Grains/Bakery", "Protein", "Dairy", "Fruit", "Vegetables", "Candy/Sweets",
@@ -66,7 +67,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
     try {
       await onLog(snack);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not log that snack.");
+      setMessage(friendlyError(error));
     } finally {
       setBusyKey("");
     }
@@ -79,7 +80,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
     try {
       await onManualLog(manualName, manualCategory);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not add that snack.");
+      setMessage(friendlyError(error));
     } finally {
       setBusyKey("");
     }
@@ -95,7 +96,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
       setCorrection(null);
       setCorrectionReason("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not submit the correction.");
+      setMessage(friendlyError(error));
     } finally {
       setBusyKey("");
     }
@@ -131,7 +132,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
             return (
               <article className="search-result" key={key}>
                 <span className="result-image" aria-hidden="true">
-                  {snack.imageUrl ? <img src={snack.imageUrl} alt="" onError={(event) => { event.currentTarget.hidden = true; }} /> : snack.name.slice(0, 1)}
+                  {snack.imageUrl ? <img src={snack.imageUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true; }} /> : snack.name.slice(0, 1)}
                 </span>
                 <span><b>{snack.name}</b><small>{[snack.brand, snack.category || "Other"].filter(Boolean).join(" · ")}</small></span>
                 <button className="primary-button compact" onClick={() => log(snack, key)} disabled={Boolean(busyKey)}>

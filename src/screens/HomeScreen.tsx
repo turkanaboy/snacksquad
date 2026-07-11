@@ -6,16 +6,19 @@ type Props = {
   leaderboard: LeaderboardItem[];
   currentUserId: string;
   loading: boolean;
+  hasMore: boolean;
+  loadingMore: boolean;
   onSearch: (query: string) => void;
   onUpvote: (entry: BoardEntry) => void;
   onOpenProfile: (userId: string) => void;
   onOpenContests: () => void;
+  onLoadMore: () => void;
 };
 
 function ProductImage({ src, name }: { src: string | null; name: string }) {
   const [failed, setFailed] = useState(false);
   return src && !failed
-    ? <img className="product-image" src={src} alt="" onError={() => setFailed(true)} />
+    ? <img className="product-image" src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
     : <span className="product-fallback" aria-hidden="true">{name.slice(0, 1)}</span>;
 }
 
@@ -24,7 +27,7 @@ function timeLabel(value: string) {
 }
 
 export function HomeScreen({
-  board, leaderboard, currentUserId, loading, onSearch, onUpvote, onOpenProfile, onOpenContests,
+  board, leaderboard, currentUserId, loading, hasMore, loadingMore, onSearch, onUpvote, onOpenProfile, onOpenContests, onLoadMore,
 }: Props) {
   const [query, setQuery] = useState("");
 
@@ -46,7 +49,7 @@ export function HomeScreen({
         </form>
 
         <header className="section-heading">
-          <div><h1 id="activity-title">Today’s activity</h1><p>Separate check-ins, shared momentum.</p></div>
+          <div><h1 id="activity-title">Recent activity</h1><p>Separate check-ins, shared momentum.</p></div>
           <span>{board.length} {board.length === 1 ? "log" : "logs"}</span>
         </header>
 
@@ -79,6 +82,7 @@ export function HomeScreen({
             );
           })}
         </section>
+        {hasMore ? <button className="secondary-button feed-more" disabled={loadingMore} onClick={onLoadMore}>{loadingMore ? "Loading…" : "Load older activity"}</button> : null}
 
         <button className="contest-strip" onClick={onOpenContests}>
           <span><b>Weekly bracket</b><small>See nominations and active matchups</small></span>

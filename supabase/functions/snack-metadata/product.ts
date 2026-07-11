@@ -120,11 +120,13 @@ export function mapUsdaFoods(foods: UsdaFood[], fallbackName: string) {
     const sourceCategory = text(food.foodCategory, 120);
     const barcode = normalizeGtin(food.gtinUpc);
     const rawFdcId = typeof food.fdcId === "number" || typeof food.fdcId === "string" ? String(food.fdcId) : "";
-    const sourceUrl = /^\d+$/.test(rawFdcId)
+    const hasProviderId = /^\d+$/.test(rawFdcId);
+    const sourceUrl = hasProviderId
       ? `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${rawFdcId}/nutrients`
       : undefined;
 
     return {
+      ...(hasProviderId ? { providerId: rawFdcId } : {}),
       name: text(food.description) ?? text(fallbackName) ?? "Unknown snack",
       ...(brand ? { brand } : {}),
       ...(sourceCategory ? { category: mapSnackCategory(sourceCategory), sourceCategories: [sourceCategory] } : {}),
