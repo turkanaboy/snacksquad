@@ -1,4 +1,4 @@
-import { mapUsdaFoods, normalizeGtin, type UsdaFood } from "./product.ts";
+import { mapUsdaFoods, normalizeGtin, selectUsdaFoods, type UsdaFood } from "./product.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,12 +34,17 @@ Deno.serve(async (request) => {
 
   const url = new URL("https://api.nal.usda.gov/fdc/v1/foods/search");
   url.searchParams.set("api_key", apiKey);
+  const isBarcode = /^\d{8,14}$/.test(cleanedQuery);
 
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: { Accept: "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({ query: cleanedQuery, dataType: ["Branded"], pageSize: 8 }),
+      body: JSON.stringify({
+        query: cleanedQuery,
+        dataType: isBarcode ? ["Branded"] : ["Foundation", "Branded"],
+        pageSize: isBarcode ? 8 : 25,
+      }),
       signal: AbortSignal.timeout(8_000),
     });
 
@@ -51,9 +56,11 @@ Deno.serve(async (request) => {
     const data = await response.json() as { foods?: unknown };
     if (!Array.isArray(data.foods)) return json({ products: [], unavailable: true });
     let foods = data.foods.filter((food): food is UsdaFood => Boolean(food && typeof food === "object" && !Array.isArray(food)));
-    if (/^\d{8,14}$/.test(cleanedQuery)) {
+    if (isBarcode) {
       const normalizedQuery = normalizeGtin(cleanedQuery);
       foods = foods.filter((food) => normalizeGtin(food.gtinUpc) === normalizedQuery);
+    } else {
+      foods = selectUsdaFoods(foods, cleanedQuery);
     }
     return json({ products: mapUsdaFoods(foods, cleanedQuery) });
   } catch (error) {

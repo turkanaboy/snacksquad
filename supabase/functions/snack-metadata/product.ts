@@ -5,6 +5,7 @@ type UsdaFoodNutrient = {
 
 export type UsdaFood = {
   fdcId?: unknown;
+  dataType?: unknown;
   description?: unknown;
   brandName?: unknown;
   brandOwner?: unknown;
@@ -28,9 +29,46 @@ function text(value: unknown, maxLength = 160) {
   return typeof value === "string" && value.trim() ? value.trim().slice(0, maxLength) : undefined;
 }
 
+function searchText(value: unknown) {
+  return typeof value === "string"
+    ? value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+    : "";
+}
+
 export function normalizeGtin(value: unknown) {
   const barcode = typeof value === "string" ? value.trim() : undefined;
   return barcode && /^\d{8,14}$/.test(barcode) ? barcode.padStart(14, "0") : undefined;
+}
+
+export function selectUsdaFoods(foods: UsdaFood[], query: string, limit = 8) {
+  const normalizedQuery = searchText(query);
+  const terms = normalizedQuery.split(" ").filter(Boolean);
+  const ranked = foods
+    .filter((food) => {
+      const description = searchText(food.description);
+      const searchable = `${description} ${searchText(food.brandName)} ${searchText(food.brandOwner)}`;
+      return Boolean(description) && terms.every((term) => searchable.includes(term));
+    })
+    .sort((left, right) => {
+      const sourceRank = (food: UsdaFood) => food.dataType === "Foundation" ? 0 : 1;
+      const matchRank = (food: UsdaFood) => {
+        const description = searchText(food.description);
+        return description === normalizedQuery ? 0 : description.startsWith(normalizedQuery) ? 1 : 2;
+      };
+      return sourceRank(left) - sourceRank(right) || matchRank(left) - matchRank(right);
+    });
+
+  const selected: UsdaFood[] = [];
+  const seen = new Set<string>();
+  for (const food of ranked) {
+    const brand = text(food.brandName) ?? text(food.brandOwner);
+    const key = `${searchText(food.description)}|${searchText(brand)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    selected.push(food);
+    if (selected.length === limit) break;
+  }
+  return selected;
 }
 
 function mapSnackCategory(category: string): SnackCategory {

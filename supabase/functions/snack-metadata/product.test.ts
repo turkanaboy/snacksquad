@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mapUsdaFoods } from "./product";
+import { mapUsdaFoods, selectUsdaFoods } from "./product";
 
 const completeNutrients = [
   { nutrientName: "Energy", value: 450, unitName: "KCAL" },
@@ -42,5 +42,12 @@ assert.equal(mapUsdaFoods([{ foodCategory: "Chips, Pretzels & Snacks" }], "chips
 assert.equal(mapUsdaFoods([{ gtinUpc: "not-a-barcode" }], "chips")[0].barcode, undefined);
 assert.equal(mapUsdaFoods([{ gtinUpc: "123456789012345" }], "chips")[0].barcode, undefined);
 assert.equal(mapUsdaFoods([{ description: "x".repeat(300) }], "chips")[0].name.length, 160);
+
+assert.deepEqual(selectUsdaFoods([
+  { fdcId: 1, dataType: "Branded", description: "HONEYCRISP APPLES, HONEYCRISP", brandName: "MEIJER", gtinUpc: "11111111" },
+  { fdcId: 2, dataType: "Branded", description: "HONEYCRISP APPLES, HONEYCRISP", brandName: "MEIJER", gtinUpc: "22222222" },
+  { fdcId: 3, dataType: "Foundation", description: "Apples, honeycrisp, with skin, raw" },
+  { fdcId: 4, dataType: "Branded", description: "Apple cider", brandName: "Other" },
+], "honeycrisp").map((food) => food.fdcId), [3, 1]);
 
 console.log("USDA product mapping tests passed");
