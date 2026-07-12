@@ -39,12 +39,16 @@ export function emailFor(notification: Notification, siteUrl: string, from: stri
 Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
   const supabaseUrl = env("SUPABASE_URL");
-  const serviceKey = env("SUPABASE_SECRET_KEY") ?? env("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceKeys = [env("SUPABASE_SECRET_KEY"), env("SUPABASE_SERVICE_ROLE_KEY")].filter((key): key is string => Boolean(key));
+  const serviceKey = serviceKeys[0];
+  const cronSecret = env("FANTASY_CRON_SECRET");
   const resendKey = env("RESEND_API_KEY");
   const from = env("FANTASY_EMAIL_FROM");
   const siteUrl = env("SITE_URL");
   if (!supabaseUrl || !serviceKey || !resendKey || !from || !siteUrl) return json({ error: "Notification delivery is not configured." }, 503);
-  if (request.headers.get("Authorization") !== `Bearer ${serviceKey}`) return json({ error: "Unauthorized." }, 401);
+  const serviceAuthorized = serviceKeys.some((key) => request.headers.get("Authorization") === `Bearer ${key}`);
+  const cronAuthorized = Boolean(cronSecret) && request.headers.get("X-Fantasy-Cron-Secret") === cronSecret;
+  if (!serviceAuthorized && !cronAuthorized) return json({ error: "Unauthorized." }, 401);
 
   const leaseToken = crypto.randomUUID();
   let notifications: Notification[];

@@ -5,7 +5,9 @@ const denoGlobal = globalThis as typeof globalThis & { Deno?: unknown };
 denoGlobal.Deno = {
   env: { get: (name: string) => ({
     SUPABASE_URL: "https://test.supabase.co",
+    SUPABASE_SECRET_KEY: "secret-key",
     SUPABASE_SERVICE_ROLE_KEY: "service-key",
+    FANTASY_CRON_SECRET: "cron-key",
     RESEND_API_KEY: "resend-key",
     FANTASY_EMAIL_FROM: "Fantasy <fantasy@example.com>",
     SITE_URL: "https://snacks.example.com",
@@ -36,6 +38,8 @@ assert.equal((await handler(new Request("http://local", { method: "POST" }))).st
 const response = await handler(new Request("http://local", { method: "POST", headers: { Authorization: "Bearer service-key" } }));
 assert.equal(response.status, 200);
 assert.deepEqual(await response.json(), { claimed: 1, sent: 1 });
+assert.equal((await handler(new Request("http://local", { method: "POST", headers: { Authorization: "Bearer secret-key" } }))).status, 200);
+assert.equal((await handler(new Request("http://local", { method: "POST", headers: { "X-Fantasy-Cron-Secret": "cron-key" } }))).status, 200);
 const send = calls.find((call) => new URL(call.url).pathname === "/emails");
 assert.equal((send?.options?.headers as Record<string,string>)["Idempotency-Key"], "notice-1");
 assert.match(String(send?.options?.body), /delivered\+bot1@resend.dev/);
