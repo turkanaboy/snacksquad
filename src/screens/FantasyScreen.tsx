@@ -2,14 +2,12 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createFantasyLeague,
-  easternMonthStart,
   getFantasyOverview,
   getMyFantasyLeagues,
   joinFantasyLeague,
   setFantasyPreferences,
   startFantasyDraft,
   submitFantasyPick,
-  submitFantasyWaiver,
   type FantasyFeatureState,
   type FantasyLeague,
   type FantasyOverview,
@@ -17,11 +15,11 @@ import {
 import { createSupabaseSnackSearch, saveSelectedSnack, type SnackMetadata } from "../snackMetadata";
 import { friendlyError } from "../errors";
 
-type Props = { client: SupabaseClient; currentUserId: string; feature: FantasyFeatureState };
+type Props = { client: SupabaseClient; currentUserId: string; feature: FantasyFeatureState; initialLeagueId?: string };
 
-export function FantasyScreen({ client, currentUserId, feature }: Props) {
+export function FantasyScreen({ client, currentUserId, feature, initialLeagueId = "" }: Props) {
   const [leagues, setLeagues] = useState<FantasyLeague[]>([]);
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId, setSelectedId] = useState(initialLeagueId);
   const [overview, setOverview] = useState<FantasyOverview | null>(null);
   const [loading, setLoading] = useState(feature.enabled);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -32,14 +30,13 @@ export function FantasyScreen({ client, currentUserId, feature }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SnackMetadata[]>([]);
   const [preferences, setPreferences] = useState<SnackMetadata[]>([]);
-  const [waiverOut, setWaiverOut] = useState("");
 
   const load = useCallback(async () => {
     if (!feature.enabled) return;
     try {
       const next = await getMyFantasyLeagues(client);
       setLeagues(next);
-      const id = selectedId || next[0]?.id || "";
+      const id = next.some((league) => league.id === selectedId) ? selectedId : next[0]?.id || "";
       setSelectedId(id);
       setOverview(id ? await getFantasyOverview(client, id) : null);
       setLoadFailed(false);
@@ -123,7 +120,7 @@ export function FantasyScreen({ client, currentUserId, feature }: Props) {
     }
   }
 
-  async function choose(snack: SnackMetadata, mode: "pick" | "preference" | "waiver") {
+  async function choose(snack: SnackMetadata, mode: "pick" | "preference") {
     setBusy(true);
     setError("");
     try {
@@ -133,12 +130,7 @@ export function FantasyScreen({ client, currentUserId, feature }: Props) {
         return;
       }
       if (!season) return;
-      if (mode === "waiver") {
-        if (!waiverOut) throw new Error("Choose the roster snack you are replacing.");
-        await submitFantasyWaiver(client, season.id, waiverOut, id);
-      } else {
-        await submitFantasyPick(client, season.id, id);
-      }
+      await submitFantasyPick(client, season.id, id);
       setQuery("");
       await load();
     } catch (actionError) {
@@ -151,7 +143,7 @@ export function FantasyScreen({ client, currentUserId, feature }: Props) {
   return (
     <div className="fantasy-screen">
       <header className="fantasy-hero">
-        <p className="section-label">Monthly fantasy</p>
+        <p className="section-label">Two-week fantasy</p>
         <h1>Draft your snack shelf.</h1>
         <p>Five categories. Exclusive picks. Everyone else’s activity scores for you.</p>
       </header>
@@ -174,8 +166,8 @@ export function FantasyScreen({ client, currentUserId, feature }: Props) {
           </div>
           {!season ? (
             <section className="draft-lobby">
-              <div><h2>Draft lobby</h2><p>Four managers and enough catalog depth are required before the monthly snake draft can start.</p></div>
-              {selectedLeague?.isCreator ? <button className="primary-button" disabled={busy || selectedLeague.memberCount < 4} onClick={() => void act(() => startFantasyDraft(client, selectedId, easternMonthStart()))}>Start this month’s draft</button> : null}
+              <div><h2>Draft lobby</h2><p>Four managers are required. Missing auto-picks are filled from the private reserve.</p></div>
+              {selectedLeague?.isCreator ? <button className="primary-button" disabled={busy || selectedLeague.memberCount < 4} onClick={() => void act(() => startFantasyDraft(client, selectedId))}>Start season</button> : null}
             </section>
           ) : (
             <>
@@ -190,7 +182,7 @@ export function FantasyScreen({ client, currentUserId, feature }: Props) {
                     {preferences.length ? <div className="preference-queue"><h3>Auto-pick order</h3><ol>{preferences.map((snack) => <li key={snack.id}>{snack.name}<button type="button" className="text-button" onClick={() => setPreferences((current) => current.filter((item) => item.id !== snack.id))}>Remove</button></li>)}</ol><button className="secondary-button" disabled={busy} onClick={() => void act(() => setFantasyPreferences(client, season.id, preferences.map((snack) => snack.id!)))}>Save queue</button></div> : null}
                   </div>
                 </section>
-              ) : <ActiveSeason overview={overview!} currentUserId={currentUserId} query={query} setQuery={setQuery} submitSearch={submitSearch} results={results} waiverOut={waiverOut} setWaiverOut={setWaiverOut} busy={busy} choose={choose} />}
+              ) : <SeasonSummary overview={overview!} currentUserId={currentUserId} isCreator={Boolean(selectedLeague?.isCreator)} busy={busy} onRestart={() => void act(() => startFantasyDraft(client, selectedId))} />}
             </>
           )}
         </>
@@ -214,9 +206,8 @@ function LockedFantasy({ feature }: { feature: FantasyFeatureState }) {
   return <div className="fantasy-screen locked-fantasy"><header className="fantasy-hero"><p className="section-label">Fantasy league</p><h1>Earn the unlock.</h1><p>The draft room stays closed until Snack Squad proves four weeks of healthy daily participation.</p></header><div className="pilot-meter">{metrics.map((metric) => <div className={metric.pass ? "passed" : ""} key={metric.label}><span>{metric.label}</span><b>{metric.value}</b><small>{metric.pass ? "Ready" : "Not yet"}</small></div>)}</div><p className="lock-note">A moderator reviews these signals before enabling fantasy. The gate never opens automatically.</p></div>;
 }
 
-function ActiveSeason({ overview, currentUserId, query, setQuery, submitSearch, results, waiverOut, setWaiverOut, busy, choose }: { overview: FantasyOverview; currentUserId: string; query: string; setQuery: (value: string) => void; submitSearch: (event: FormEvent) => Promise<void>; results: SnackMetadata[]; waiverOut: string; setWaiverOut: (value: string) => void; busy: boolean; choose: (snack: SnackMetadata, mode: "waiver") => Promise<void> }) {
+function SeasonSummary({ overview, currentUserId, isCreator, busy, onRestart }: { overview: FantasyOverview; currentUserId: string; isCreator: boolean; busy: boolean; onRestart: () => void }) {
   const mine = overview.roster.filter((slot) => slot.userId === currentUserId);
-  const outgoing = mine.find((slot) => slot.snackId === waiverOut);
-  const replacements = outgoing ? results.filter((snack) => snack.category === outgoing.category) : [];
-  return <section className="active-fantasy"><div className="standings"><h2>Standings</h2><ol>{overview.standings.map((standing, index) => <li key={standing.userId}><span>{index + 1}</span><b>{overview.members.find((member) => member.userId === standing.userId)?.displayName}</b><strong>{standing.points}</strong></li>)}</ol></div><div className="my-roster"><h2>Your roster</h2><ul>{mine.map((slot) => <li key={slot.category}><span><b>{slot.snackName}</b><small>{slot.category}</small></span></li>)}</ul><h3>Friday waiver</h3><label>Replace<select value={waiverOut} onChange={(event) => setWaiverOut(event.target.value)}><option value="">Choose roster snack</option>{mine.map((slot) => <option value={slot.snackId} key={slot.snackId}>{slot.snackName}</option>)}</select></label><SearchForm query={query} setQuery={setQuery} busy={busy} submitSearch={submitSearch} />{waiverOut && results.length > 0 && replacements.length === 0 ? <p className="empty-state">No same-category replacements found.</p> : null}{replacements.map((snack, index) => <button type="button" className="text-button" disabled={busy} key={snack.id || snack.providerId || index} onClick={() => void choose(snack, "waiver")}>Claim {snack.name}</button>)}</div></section>;
+  const scheduled = overview.season?.status === "active" && overview.season.scoringStartsAt && new Date(overview.season.scoringStartsAt) > new Date();
+  return <section className="active-fantasy"><div className="standings"><h2>{scheduled ? "Scoring starts soon" : overview.season?.status === "complete" ? "Final standings" : "Standings"}</h2>{scheduled ? <p>Season {overview.season?.seasonNumber} begins {new Date(overview.season!.scoringStartsAt!).toLocaleString()}.</p> : <ol>{overview.standings.map((standing, index) => <li key={standing.userId}><span>{index + 1}</span><b>{overview.members.find((member) => member.userId === standing.userId)?.displayName}</b><strong>{standing.points}</strong></li>)}</ol>}{overview.season?.status === "complete" && isCreator ? <button className="primary-button" disabled={busy} onClick={onRestart}>Start next season</button> : null}</div><div className="my-roster"><h2>Your fixed roster</h2><ul>{mine.map((slot) => <li key={slot.category}><span><b>{slot.snackName}</b><small>{slot.category}</small></span></li>)}</ul><p className="empty-state">Rosters stay fixed through both scoring weeks.</p></div></section>;
 }

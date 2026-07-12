@@ -27,10 +27,23 @@ function initialAuthError() {
   return message ? friendlyError(new Error(message)) : "";
 }
 
+const requestedLeague = () => {
+  const params=new URLSearchParams(window.location.search);
+  const league=params.get("league") || "";
+  return params.get("view") === "fantasy" && /^[0-9a-f-]{36}$/i.test(league) ? league : "";
+};
+
+const magicLinkDestination = () => {
+  const destination=new URL(window.location.origin);
+  const league=requestedLeague();
+  if(league){destination.searchParams.set("view","fantasy");destination.searchParams.set("league",league);}
+  return destination.toString();
+};
+
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [view, setView] = useState<AppView>("home");
+  const [view, setView] = useState<AppView>(() => requestedLeague() ? "fantasy" : "home");
   const [board, setBoard] = useState<BoardEntry[]>([]);
   const [hasMoreBoard, setHasMoreBoard] = useState(false);
   const [loadingMoreBoard, setLoadingMoreBoard] = useState(false);
@@ -102,7 +115,7 @@ export default function App() {
   if (session === undefined) return <main className="loading-page"><p role="status">Opening Snack Squad…</p></main>;
 
   if (!session) {
-    return <AuthScreen initialError={initialAuthError()} onRequestLink={(email) => requestMagicLink(client, email, window.location.origin)} />;
+    return <AuthScreen initialError={initialAuthError()} onRequestLink={(email) => requestMagicLink(client, email, magicLinkDestination())} />;
   }
 
   if (!profile) return <main className="loading-page"><p role="status">Loading your taste file…</p>{notice ? <p role="alert">{notice}</p> : null}</main>;
@@ -218,9 +231,9 @@ export default function App() {
         />
       ) : null}
       {view === "contests" ? (
-        <ContestsScreen client={client} currentUserId={activeSession.user.id} />
+        <ContestsScreen client={client} currentUserId={activeSession.user.id} onOpenFantasy={() => setView("fantasy")} />
       ) : null}
-      {view === "fantasy" ? <FantasyScreen client={client} currentUserId={activeSession.user.id} feature={fantasyFeature} /> : null}
+      {view === "fantasy" ? <FantasyScreen client={client} currentUserId={activeSession.user.id} feature={fantasyFeature} initialLeagueId={requestedLeague()} /> : null}
     </AppShell>
   );
 }

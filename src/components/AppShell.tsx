@@ -21,7 +21,7 @@ const navigation: Array<{ view: AppView; label: string; icon: string }> = [
 
 export function AppShell({ view, displayName, email, onNavigate, onSignOut, fantasyEnabled, children }: Props) {
   const desktopNavigation = fantasyEnabled ? [...navigation.slice(0, 3), { view: "fantasy" as const, label: "Fantasy", icon: "▣" }, navigation[3]] : navigation;
-  const mobileNavigation = fantasyEnabled ? desktopNavigation : navigation;
+  const mobileNavigation = navigation;
   return (
     <div className="app-frame">
       <a className="skip-link" href="#main-content">Skip to content</a>

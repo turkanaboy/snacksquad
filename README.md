@@ -1,12 +1,12 @@
 # Snack Squad
 
-Private Carnegie Higher Ed snack logging and social competition. Members sign in by company magic link, record daily snacks, upvote coworker entries, follow rolling standings, and play the automated weekly bracket. Badges and Friday reports preserve winners. Monthly fantasy leagues are implemented but remain locked until the pilot gate is deliberately approved.
+Private Carnegie Higher Ed snack logging and social competition. Members sign in by company magic link, record daily snacks, upvote coworker entries, follow rolling standings, and play the automated weekly bracket. Fantasy leagues are open with five-round drafts, fixed rosters, and two Monday-Friday scoring weeks.
 
 ## App setup
 
 1. Install Node.js dependencies with `npm.cmd install`.
 2. Copy `.env.example` to `.env.local` and add the URL and publishable key for either your hosted Supabase project or a local stack.
-3. Copy `supabase/functions/.env.example` to `supabase/functions/.env` and add the server-only `USDA_API_KEY`. Never prefix the USDA key with `VITE_` or expose a secret/service-role key to the browser app.
+3. Copy `supabase/functions/.env.example` to `supabase/functions/.env` and add the server-only USDA, Resend, sender, and site URL values. Never expose a secret/service-role key to the browser app.
 4. Start the app with `npm.cmd run dev`.
 
 ### Optional local Supabase
@@ -47,6 +47,7 @@ npm.cmd exec -- supabase link --project-ref YOUR_PROJECT_REF
 npm.cmd exec -- supabase db push
 npm.cmd exec -- supabase secrets set USDA_API_KEY=your-data-gov-key
 npm.cmd exec -- supabase functions deploy snack-metadata
+npm.cmd exec -- supabase functions deploy fantasy-notifications --no-verify-jwt
 ```
 
 Complete the exact Auth, SMTP, moderator, Cron, and rollout checks in [docs/auth-setup.md](docs/auth-setup.md) and [docs/pilot-runbook.md](docs/pilot-runbook.md).
@@ -56,4 +57,4 @@ Complete the exact Auth, SMTP, moderator, Cron, and rollout checks in [docs/auth
 - No calorie, serving, quantity, rating, or comment tracking.
 - Personal log history stays private; shared surfaces use narrow database projections.
 - Canonical metadata changes require a moderator; members submit corrections.
-- Fantasy stays disabled until a moderator reviews four weeks of pilot signals and explicitly changes `fantasy_enabled`.
+- Bot-test activity scores only in its linked Fantasy season and is excluded from shared rankings, feeds, brackets, badges, and reports.

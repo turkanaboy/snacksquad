@@ -1,6 +1,6 @@
 # Auth Setup
 
-Snack Squad uses Supabase email magic links. Anonymous sign-in is disabled, and the database Before User Created hook rejects every new account outside `@carnegiehighered.com`.
+Snack Squad uses Supabase email magic links. Anonymous sign-in is disabled, and the database Before User Created hook rejects every ordinary account outside `@carnegiehighered.com`. The service-role bot runner may create synthetic non-company accounts only with protected `app_metadata.snack_squad_test_bot`; browser `user_metadata` cannot grant that exception.
 
 ## Local development
 
@@ -23,6 +23,7 @@ Complete these steps in the non-production test project first, then repeat them 
 5. Configure custom SMTP before inviting the pilot team; Supabase's default mail service is not intended for a company pilot.
 6. Send one magic link to an eligible company address and verify sign-in, profile creation, and sign-out.
 7. Attempt sign-up with a non-company address and verify Auth rejects it before creating a user.
+8. Keep the service-role key limited to the notification function and the operator machine; never add the bot marker to browser signup code.
 
 ## Moderator designation
 

@@ -7,10 +7,12 @@
 - Run `npm.cmd exec -- supabase migration list` and confirm local and linked histories match.
 - Configure the Auth hook, exact redirect URLs, custom SMTP, and anonymous-sign-in setting in [auth-setup.md](auth-setup.md).
 - Set `USDA_API_KEY` and deploy `snack-metadata`.
+- Set `RESEND_API_KEY`, `FANTASY_EMAIL_FROM`, and `SITE_URL`, then deploy `fantasy-notifications --no-verify-jwt`.
+- Add Vault secrets named `snack_squad_project_url` and `snack_squad_service_role_key`; confirm the `fantasy-notification-sender` Cron job runs each minute.
 - Configure the frontend host to send Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and Permissions-Policy headers; the exact CSP must allow the selected Supabase project and approved USDA image hosts.
 - Add at least one moderator in `public.moderators` after their first login.
 - Confirm the `snack-squad-competition-reconciler` Cron job runs every five minutes without errors.
-- Keep `public.feature_flags.fantasy_enabled = false` for launch.
+- Confirm `public.feature_flags.fantasy_enabled = true`; the site is intentionally unused while the bot test runs.
 
 ## Pilot smoke test
 
@@ -34,20 +36,23 @@ Use two eligible company accounts and one ineligible external address.
 - Monitor Cron history, Auth hook failures, Edge Function errors, and Supabase security/performance advisors during the pilot.
 - Catalog or USDA FoodData Central outages must not block manual entries.
 
-## Fantasy unlock review
+## Fantasy bot mechanics test
 
-After four full weeks, open the locked Fantasy gate and review all five signals: more than five daily active users, a fully participated bracket, growing weekly users, at least three logs per user per week, and four observed weeks. The UI never unlocks automatically.
+Run the live mechanics test only after hosted preflight confirms matching migration history, no Fantasy rows, no human activity, configured secrets, and a healthy reconciler:
 
-If the moderator approves the pilot, run a controlled SQL update:
-
-```sql
-update public.feature_flags
-set enabled = true,
-    updated_by = 'MODERATOR-AUTH-USER-ID'
-where key = 'fantasy_enabled';
+```powershell
+npm.cmd run fantasy:bot -- run --live
+npm.cmd run fantasy:bot -- inspect RUN_ID
 ```
 
-Recheck the desktop and mobile Fantasy navigation, four-to-eight-manager limits, catalog preflight, draft clock, and Friday waiver before announcing the unlock.
+The run creates four synthetic Auth users, a four-manager league, one manual pick, one preference auto-pick, fallback auto-picks, captured start/reminder mail, tied scoring, and a completed retained season. Verify it remains absent from Home, general rankings, brackets, non-Fantasy badges, and weekly reports.
+
+Do not clean up after verification. Immediately before coworkers are invited, and only after the owner explicitly asks, first inspect the exact run and then execute the guarded command:
+
+```powershell
+npm.cmd run fantasy:bot -- cleanup RUN_ID
+npm.cmd run fantasy:bot -- cleanup RUN_ID --execute --confirm RUN_ID
+```
 
 ## Rollback
 
