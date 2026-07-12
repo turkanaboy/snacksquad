@@ -17,6 +17,8 @@ export type SnackMetadata = {
 export type SnackCorrection = {
   id: string;
   snackId: string;
+  snackName: string;
+  currentValues: Record<string, unknown>;
   proposedChanges: Record<string, unknown>;
   reason: string;
   status: string;
@@ -207,17 +209,22 @@ export async function submitSnackCorrection(
 
 export async function listSnackCorrections(client: Pick<SupabaseClient, "from">): Promise<SnackCorrection[]> {
   const result = await client.from("snack_corrections")
-    .select("id,snack_id,proposed_changes,reason,status,created_at")
+    .select("id,snack_id,proposed_changes,reason,status,created_at,snacks(name,brand,barcode,category,image_url,source_url,nutri_score,nutrition_complete,nutrition_verified)")
     .order("created_at", { ascending: false });
   if (result.error) throw result.error;
-  return (result.data || []).map((row) => ({
-    id: row.id,
-    snackId: row.snack_id,
-    proposedChanges: row.proposed_changes,
-    reason: row.reason,
-    status: row.status,
-    createdAt: row.created_at,
-  }));
+  return (result.data || []).map((row) => {
+    const snack = (row.snacks || {}) as unknown as Record<string, unknown>;
+    return {
+      id: row.id,
+      snackId: row.snack_id,
+      snackName: String(snack.name || "Snack"),
+      currentValues: snack,
+      proposedChanges: row.proposed_changes,
+      reason: row.reason,
+      status: row.status,
+      createdAt: row.created_at,
+    };
+  });
 }
 
 export async function reviewSnackCorrection(
