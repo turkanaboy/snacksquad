@@ -214,7 +214,7 @@ export default function App() {
           onBackToMine={() => setPublicProfile(null)}
           onUpdate={async (changes) => setProfile(await updateMyProfile(client, changes))}
           onReplaceLog={(log) => { setEditingLog(log); setLogQuery(log.snackName); setView("log"); }}
-          onChanged={() => void refreshCore()}
+          onChanged={refreshCore}
         />
       ) : null}
       {view === "contests" ? (

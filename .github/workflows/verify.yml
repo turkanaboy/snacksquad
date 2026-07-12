@@ -33,7 +33,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm exec -- supabase start
-      - run: npm exec -- supabase db reset
+      - run: npm exec -- supabase db reset --no-seed
       - run: npm exec -- supabase test db
       - run: npm exec -- supabase db lint --fail-on error
       - if: always()

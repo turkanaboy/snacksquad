@@ -15,8 +15,20 @@ type Props = {
   onBackToMine: () => void;
   onUpdate: (changes: { displayName?: string; favoriteSnackId?: string | null }) => Promise<void>;
   onReplaceLog: (log: MySnackLog) => void;
-  onChanged: () => void;
+  onChanged: () => Promise<void>;
 };
+
+const correctionLabels: Record<string, string> = {
+  name: "Name", brand: "Brand", barcode: "Barcode", category: "Category", image_url: "Image",
+  source_url: "Source", nutri_score: "Nutri-Score", nutrition_complete: "Nutrition complete",
+  nutrition_verified: "Nutrition verified",
+};
+
+function correctionValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return "Not set";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value);
+}
 
 function todayInEastern() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -90,7 +102,7 @@ export function ProfileScreen({
     try {
       await removeSnackLog(client, log.id);
       await refreshPrivate();
-      onChanged();
+      await onChanged();
       setMessage("Today’s log was removed.");
     } catch (error) {
       setMessage(friendlyError(error));
@@ -104,6 +116,7 @@ export function ProfileScreen({
     try {
       await reviewSnackCorrection(client, correctionId, approve);
       await refreshPrivate();
+      await onChanged();
       setMessage(approve ? "Correction approved." : "Correction rejected.");
     } catch (error) {
       setMessage(friendlyError(error));
@@ -125,7 +138,7 @@ export function ProfileScreen({
 
       <section className="profile-section"><div className="section-heading"><div><h2>Private snack log</h2><p>Only you can see these daily entries.</p></div><span>{logs.length}</span></div>{logs.length ? <ul className="private-log">{logs.map((log) => { const open = log.loggedOn === easternToday; return <li key={log.id}><div><b>{log.snackName}</b><small>{log.loggedOn} · {log.category}</small></div>{open ? <div className="button-row"><button className="text-button" onClick={() => onReplaceLog(log)}>Replace</button><button className="text-button danger" disabled={busy} onClick={() => void remove(log)}>Delete</button></div> : <span className="settled-label">Settled</span>}</li>; })}</ul> : <p className="empty-state">Your first log will appear here.</p>}</section>
 
-      <section className="profile-section"><div className="section-heading"><div><h2>{moderator ? "Correction queue" : "Your corrections"}</h2><p>{moderator ? "Review shared catalog changes." : "Moderator review status."}</p></div><span>{corrections.length}</span></div>{corrections.length ? <ul className="correction-list">{corrections.map((item) => <li key={item.id}><div><b>{String(item.proposedChanges.name || "Metadata update")}</b><p>{item.reason}</p><small>{item.status}</small></div>{moderator && item.status === "pending" ? <div className="button-row"><button className="text-button" disabled={busy} onClick={() => void review(item.id, true)}>Approve</button><button className="text-button danger" disabled={busy} onClick={() => void review(item.id, false)}>Reject</button></div> : null}</li>)}</ul> : <p className="empty-state">No correction requests.</p>}</section>
+      <section className="profile-section"><div className="section-heading"><div><h2>{moderator ? "Correction queue" : "Your corrections"}</h2><p>{moderator ? "Review shared catalog changes." : "Moderator review status."}</p></div><span>{corrections.length}</span></div>{corrections.length ? <ul className="correction-list">{corrections.map((item) => <li key={item.id}><div className="correction-copy"><b>{item.snackName}</b><dl className="correction-diff">{Object.entries(item.proposedChanges).map(([field, next]) => <div key={field}><dt>{correctionLabels[field] || field.replaceAll("_", " ")}</dt><dd><span>{item.status === "pending" ? correctionValue(item.currentValues[field]) : "Applied"}</span><span aria-hidden="true">→</span><strong>{correctionValue(next)}</strong></dd></div>)}</dl><p>{item.reason}</p><small>{item.status}</small></div>{moderator && item.status === "pending" ? <div className="button-row"><button className="text-button" disabled={busy} onClick={() => void review(item.id, true)}>Approve</button><button className="text-button danger" disabled={busy} onClick={() => void review(item.id, false)}>Reject</button></div> : null}</li>)}</ul> : <p className="empty-state">No correction requests.</p>}</section>
       {message ? <p className="status-message" role="status">{message}</p> : null}
     </div>
   );

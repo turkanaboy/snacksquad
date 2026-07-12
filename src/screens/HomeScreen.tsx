@@ -15,11 +15,16 @@ type Props = {
   onLoadMore: () => void;
 };
 
-function ProductImage({ src, name }: { src: string | null; name: string }) {
+const categoryIcons: Record<string, string> = {
+  "Grains/Bakery": "▦", Protein: "◆", Dairy: "●", Fruit: "◆", Vegetables: "✦",
+  "Candy/Sweets": "✹", "Chips/Savory Snacks": "◒", Beverages: "◉", Other: "•",
+};
+
+function ProductImage({ src, name, category }: { src: string | null; name: string; category: string }) {
   const [failed, setFailed] = useState(false);
   return src && !failed
     ? <img className="product-image" src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
-    : <span className="product-fallback" aria-hidden="true">{name.slice(0, 1)}</span>;
+    : <span className="product-fallback" aria-hidden="true" title={name}>{categoryIcons[category] || categoryIcons.Other}</span>;
 }
 
 function timeLabel(value: string) {
@@ -61,8 +66,8 @@ export function HomeScreen({
           {board.map((entry) => {
             const ownEntry = entry.loggerId === currentUserId;
             return (
-              <article className="activity-row" key={entry.id}>
-                <div className="activity-product"><ProductImage src={entry.imageUrl} name={entry.snackName} /></div>
+              <article className={`activity-row${entry.imageUrl ? "" : " no-image"}`} key={entry.id}>
+                <div className="activity-product"><ProductImage src={entry.imageUrl} name={entry.snackName} category={entry.category} /></div>
                 <div className="activity-copy">
                   <p><button className="person-link" onClick={() => onOpenProfile(entry.loggerId)}>{entry.loggerName}</button> logged · {timeLabel(entry.loggedAt)}</p>
                   <h2>{entry.snackName}</h2>
@@ -91,15 +96,15 @@ export function HomeScreen({
       </section>
 
       <aside className="leaderboard" aria-labelledby="leaderboard-title">
-        <header><div><h2 id="leaderboard-title">Top 10 snacks</h2><p>Rolling 30 days</p></div></header>
+        <header><div><h2 id="leaderboard-title">Top 10 snacks</h2><p>30 days · ranked by upvotes</p></div></header>
         {leaderboard.length === 0 ? <p className="empty-state">Rankings appear after the first upvotes.</p> : null}
         <ol>
           {leaderboard.map((item, index) => (
             <li key={item.snackId}>
               <span className="rank">{index + 1}</span>
               <span className="rank-product" aria-hidden="true">{item.snackName.slice(0, 1)}</span>
-              <span className="rank-name"><b>{item.snackName}</b><small>{item.category}</small></span>
-              <strong>{item.upvoteCount}</strong>
+              <span className="rank-name"><b>{item.snackName}</b><small>{item.category} · {item.logCount} {item.logCount === 1 ? "log" : "logs"}</small></span>
+              <strong title={`${item.upvoteCount} upvotes`}>↑{item.upvoteCount}</strong>
             </li>
           ))}
         </ol>

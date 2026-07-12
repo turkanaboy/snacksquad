@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   createSnackSearch,
+  listSnackCorrections,
   mergeSnackMetadata,
   saveSelectedSnack,
   searchSnackMetadata,
@@ -42,6 +43,34 @@ assert.deepEqual(mergeSnackMetadata(
   { name: "Cheez-It", barcode: "024100705509" },
   { name: "Pretzels" },
 ]);
+
+assert.deepEqual(await listSnackCorrections({
+  from: () => ({
+    select: () => ({
+      order: async () => ({
+        data: [{
+          id: "correction-1",
+          snack_id: "snack-1",
+          proposed_changes: { name: "Baby Carrots" },
+          reason: "Use the package name.",
+          status: "pending",
+          created_at: "2026-07-12T12:00:00Z",
+          snacks: { name: "Carrots", brand: "Fresh", category: "Vegetables" },
+        }],
+        error: null,
+      }),
+    }),
+  }),
+} as never), [{
+  id: "correction-1",
+  snackId: "snack-1",
+  snackName: "Carrots",
+  currentValues: { name: "Carrots", brand: "Fresh", category: "Vegetables" },
+  proposedChanges: { name: "Baby Carrots" },
+  reason: "Use the package name.",
+  status: "pending",
+  createdAt: "2026-07-12T12:00:00Z",
+}]);
 
 const searchCalls: string[] = [];
 const searchEvents: Array<{ query: string; names: string[] }> = [];
