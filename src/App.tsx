@@ -231,7 +231,7 @@ export default function App() {
         />
       ) : null}
       {view === "contests" ? (
-        <ContestsScreen client={client} currentUserId={activeSession.user.id} onOpenFantasy={() => setView("fantasy")} />
+        <ContestsScreen client={client} currentUserId={activeSession.user.id} />
       ) : null}
       {view === "fantasy" ? <FantasyScreen client={client} currentUserId={activeSession.user.id} feature={fantasyFeature} initialLeagueId={requestedLeague()} /> : null}
     </AppShell>

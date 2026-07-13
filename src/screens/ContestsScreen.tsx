@@ -8,13 +8,13 @@ import {
 import { friendlyError } from "../errors";
 import { createSupabaseSnackSearch, saveSelectedSnack, type SnackMetadata } from "../snackMetadata";
 
-type Props = { client: SupabaseClient; currentUserId: string; onOpenFantasy?: () => void };
+type Props = { client: SupabaseClient; currentUserId: string };
 
 function weekLabel(value: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(`${value}T12:00:00`));
 }
 
-export function ContestsScreen({ client, currentUserId, onOpenFantasy }: Props) {
+export function ContestsScreen({ client, currentUserId }: Props) {
   const [overview, setOverview] = useState<ContestOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -94,8 +94,6 @@ export function ContestsScreen({ client, currentUserId, onOpenFantasy }: Props) 
         <div><p className="section-label">Weekly competition</p><h1>One snack survives.</h1><p>Nominate once. Vote each weekday. Every co-owner shares the win.</p></div>
         {overview ? <div className="week-stamp"><span>Week of</span><b>{weekLabel(overview.week.weekStart)}</b><small>{overview.week.status.replaceAll("_", " ")}</small></div> : null}
       </header>
-      {onOpenFantasy ? <button className="secondary-button compact" onClick={onOpenFantasy}>Open Fantasy League</button> : null}
-
       {error ? <div className="error-message" role="alert">{error}</div> : null}
       {loading ? <p className="empty-state" role="status">Loading this week’s bracket…</p> : null}
       {!loading && !overview ? <p className="empty-state">The first contest week has not opened yet.</p> : null}
