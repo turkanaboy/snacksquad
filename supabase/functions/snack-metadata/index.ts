@@ -17,6 +17,19 @@ function env(...names: string[]) {
   }
 }
 
+function defaultKey(name: string) {
+  const dictionary = env(name);
+  if (!dictionary) return;
+  try {
+    const parsed = JSON.parse(dictionary) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+    const key = (parsed as Record<string, unknown>).default;
+    return typeof key === "string" && key.trim() ? key.trim() : undefined;
+  } catch {
+    return;
+  }
+}
+
 async function authenticatedUserId(request: Request, supabaseUrl: string, publicKey: string) {
   const authorization = request.headers.get("Authorization");
   if (!authorization?.startsWith("Bearer ")) return null;
@@ -97,7 +110,7 @@ Deno.serve(async (request) => {
   const importId = typeof body.importId === "string" ? body.importId.trim() : "";
   if (importId) {
     if (!/^\d{1,12}$/.test(importId)) return json({ error: "Invalid USDA product identifier." }, 400);
-    const serviceKey = env("SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY");
+    const serviceKey = env("SUPABASE_SECRET_KEY") ?? defaultKey("SUPABASE_SECRET_KEYS") ?? env("SUPABASE_SERVICE_ROLE_KEY");
     if (!serviceKey) return json({ error: "Catalog import is not configured." }, 503);
     try {
       const url = new URL(`https://api.nal.usda.gov/fdc/v1/food/${importId}`);

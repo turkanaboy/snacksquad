@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createFantasyLeague,
+  fantasyTeamSlots,
   getFantasyOverview,
   getMyFantasyLeagues,
   joinFantasyLeague,
@@ -77,6 +78,7 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
   const pickerPosition = round % 2 === 1 ? within : managers - within + 1;
   const pickerId = overview?.draftOrder.find((manager) => manager.position === pickerPosition)?.userId;
   const myTurn = season?.status === "drafting" && pickerId === currentUserId;
+  const teamSlots = fantasyTeamSlots(overview?.roster || [], currentUserId);
 
   async function act(work: () => Promise<unknown>) {
     setBusy(true);
@@ -175,8 +177,9 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
               <section className="draft-status"><span><small>Status</small><b>{season.status}</b></span><span><small>Pick</small><b>{season.currentPick}</b></span><span><small>On the clock</small><b>{overview?.members.find((member) => member.userId === pickerId)?.displayName || "Draft complete"}</b></span><span><small>Deadline</small><b>{season.pickDeadline ? new Date(season.pickDeadline).toLocaleString() : "—"}</b></span></section>
               {season.status === "drafting" ? (
                 <section className="draft-room">
-                  <div className="draft-board"><h2>Pick history</h2>{overview?.picks.length ? <ol>{overview.picks.map((pick) => <li key={pick.pickNumber}><span>{pick.pickNumber}</span><b>{pick.snackName}</b><small>{pick.category}{pick.wasAutoPick ? " · auto-pick" : ""}</small></li>)}</ol> : <p className="empty-state">The first manager is on the clock.</p>}</div>
+                  <div className="draft-board"><h2>Pick history</h2>{overview?.picks.length ? <ol>{overview.picks.map((pick) => <li key={pick.pickNumber}><span>{pick.pickNumber}</span><b>{pick.snackName}</b><small>{overview.members.find((member) => member.userId === pick.userId)?.displayName || "Unknown manager"} · {pick.category}{pick.wasAutoPick ? " · auto-pick" : ""}</small></li>)}</ol> : <p className="empty-state">The first manager is on the clock.</p>}</div>
                   <div className="draft-actions">
+                    <div className="my-roster draft-team"><h2>Your current team</h2><ul>{teamSlots.map((slot, index) => slot ? <li key={slot.snackId}><span><b>{slot.snackName}</b><small>{slot.category}</small></span></li> : <li className="open-slot" key={`open-${index}`}><span><b>Open category</b><small>Draft from a new category</small></span></li>)}</ul></div>
                     <h2>{myTurn ? "You’re on the clock" : "Build your auto-pick queue"}</h2>
                     <SearchForm query={query} setQuery={setQuery} busy={busy} submitSearch={submitSearch} />
                     {results.length ? <ul className="fantasy-search">{results.map((snack, index) => <li key={snack.id || snack.providerId || snack.barcode || `${snack.name}-${index}`}><span><b>{snack.name}</b><small>{snack.category}</small></span><button type="button" className="text-button" disabled={busy} onClick={() => void choose(snack, myTurn ? "pick" : "preference")}>{myTurn ? "Draft" : "Add to queue"}</button></li>)}</ul> : null}

@@ -341,6 +341,7 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
 .standings li { grid-template-columns:32px minmax(0,1fr) auto; }
 .my-roster { display:grid; align-content:start; gap:14px; }
 .my-roster li { grid-template-columns:minmax(0,1fr) auto; }
+.draft-team .open-slot b { color:var(--receipt); }
 
 @media (hover: hover) and (pointer: fine) {
   .primary-button:hover { background: #fff04b; }

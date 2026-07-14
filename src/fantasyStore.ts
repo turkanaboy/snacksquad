@@ -3,15 +3,21 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 type RpcClient = Pick<SupabaseClient, "rpc">;
 export type FantasyFeatureState = { enabled: boolean; weeksObserved: number; dailyActiveUsers: number; fullBracketParticipation: boolean; weeklyUserGrowth: boolean; averageLogsPerUserWeek: number };
 export type FantasyLeague = { id: string; name: string; joinCode: string; memberCount: number; isCreator: boolean };
+export type FantasyRosterSlot = { userId: string; snackId: string; snackName: string; category: string };
 export type FantasyOverview = {
   league: { id: string; name: string; joinCode: string };
   members: Array<{ userId: string; displayName: string }>;
   season: null | { id: string; seasonNumber: number; status: string; currentPick: number; pickDeadline: string | null; scoringStartsAt: string | null; scoringEndsAt: string | null; completedAt: string | null };
   draftOrder: Array<{ userId: string; position: number }>;
   picks: Array<{ userId: string; snackId: string; snackName: string; category: string; pickNumber: number; wasAutoPick: boolean }>;
-  roster: Array<{ userId: string; snackId: string; snackName: string; category: string }>;
+  roster: FantasyRosterSlot[];
   standings: Array<{ userId: string; points: number }>;
 };
+
+export function fantasyTeamSlots(roster: FantasyRosterSlot[], userId: string): Array<FantasyRosterSlot | null> {
+  const filled = roster.filter((slot) => slot.userId === userId).slice(0, 5);
+  return [...filled, ...Array.from({ length: 5 - filled.length }, () => null)];
+}
 
 export async function getFantasyFeatureState(client: RpcClient): Promise<FantasyFeatureState> {
   const result = await client.rpc("fantasy_feature_state"); if (result.error) throw result.error;

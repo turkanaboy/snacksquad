@@ -8,7 +8,8 @@ denoGlobal.Deno = {
     USDA_API_KEY: apiKey,
     SUPABASE_URL: "https://test.supabase.co",
     SUPABASE_ANON_KEY: "test-public-key",
-    SUPABASE_SERVICE_ROLE_KEY: "test-service-key",
+    SUPABASE_SECRET_KEYS: JSON.stringify({ default: "sb_secret_current" }),
+    SUPABASE_SERVICE_ROLE_KEY: "disabled-legacy-service-key",
   } as Record<string, string>)[name] },
   serve: (nextHandler: typeof handler) => { handler = nextHandler; },
 };
@@ -25,6 +26,12 @@ globalThis.fetch = async (input, options) => {
   if (url.pathname === "/rest/v1/rpc/import_catalog_snack") return Response.json("21000000-0000-0000-0000-000000000001");
   if (url.pathname.startsWith("/fdc/v1/food/")) {
     const id = url.pathname.split("/").at(-1);
+    if (id === "5") return Response.json({
+      fdcId: 5,
+      dataType: "Foundation",
+      description: "Bananas, ripe and slightly ripe, raw",
+      foodCategory: "Fruits and Fruit Juices",
+    });
     return Response.json({ fdcId: Number(id), description: "Cheez-It Original", brandName: "Cheez-It", gtinUpc: "024100705509", foodCategory: "Crackers" });
   }
   if (fetchMode === "rate-limit") return Response.json({}, { status: 429 });
@@ -125,21 +132,22 @@ apiKey = "test-usda-key";
 const importResponse = await handler(new Request("http://localhost/snack-metadata", {
   method: "POST",
   headers: { "Content-Type": "application/json", Authorization: "Bearer test-token" },
-  body: JSON.stringify({ importId: "1" }),
+  body: JSON.stringify({ importId: "5" }),
 }));
 assert.equal(importResponse.status, 200);
 assert.deepEqual(await importResponse.json(), { snackId: "21000000-0000-0000-0000-000000000001" });
 const importCall = calls.find((call) => new URL(call.url).pathname === "/rest/v1/rpc/import_catalog_snack");
 assert(importCall);
-assert.equal((importCall.options?.headers as Record<string, string>).apikey, "test-service-key");
+assert.equal((importCall.options?.headers as Record<string, string>).apikey, "sb_secret_current");
+assert.equal((importCall.options?.headers as Record<string, string>).Authorization, undefined);
 assert.deepEqual(JSON.parse(String(importCall.options?.body)), {
-  p_name: "Cheez-It Original",
-  p_brand: "Cheez-It",
-  p_barcode: "00024100705509",
-  p_category: "Grains/Bakery",
-  p_source_categories: ["Crackers"],
+  p_name: "Bananas, ripe and slightly ripe, raw",
+  p_brand: null,
+  p_barcode: null,
+  p_category: "Fruit",
+  p_source_categories: ["Fruits and Fruit Juices"],
   p_image_url: null,
-  p_source_url: "https://fdc.nal.usda.gov/fdc-app.html#/food-details/1/nutrients",
+  p_source_url: "https://fdc.nal.usda.gov/fdc-app.html#/food-details/5/nutrients",
   p_nutrition_complete: false,
   p_created_by: "11000000-0000-0000-0000-000000000001",
 });
