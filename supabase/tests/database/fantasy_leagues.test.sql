@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
-select plan(50);
+select plan(51);
 
 select has_table('public','fantasy_leagues','fantasy leagues are persisted');
 select has_table('public','fantasy_league_members','private league membership is persisted');
@@ -25,6 +25,7 @@ select ok(not has_function_privilege('authenticated','public.start_fantasy_draft
 select ok(not has_function_privilege('authenticated','public.submit_fantasy_pick(uuid,uuid,timestamp with time zone)','EXECUTE'),'authenticated callers cannot spoof pick time');
 select ok(has_function_privilege('authenticated','public.start_fantasy_draft(uuid)','EXECUTE'),'authenticated callers can use the server-clock draft wrapper');
 select ok(has_function_privilege('authenticated','public.submit_fantasy_pick(uuid,uuid)','EXECUTE'),'authenticated callers can use the server-clock pick wrapper');
+select throws_ok($$select public.submit_fantasy_pick('00000000-0000-0000-0000-000000000001'::uuid,'00000000-0000-0000-0000-000000000002'::uuid)$$,'P0001','Authentication required.','browser-facing pick RPC resolves uniquely');
 
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 select ('13000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','fantasy'||n||'@carnegiehighered.com','',now(),'{}','{}',now(),now() from generate_series(1,4)n;
