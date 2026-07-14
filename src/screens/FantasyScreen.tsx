@@ -147,6 +147,7 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
         <h1>Draft your snack shelf.</h1>
         <p>Five categories. Exclusive picks. Everyone else’s activity scores for you.</p>
       </header>
+      <FantasyRules />
       {error ? <div className="error-message" role="alert">{error}</div> : null}
 
       {loadFailed && !leagues.length ? (
@@ -195,6 +196,17 @@ function SearchForm({ query, setQuery, busy, submitSearch }: { query: string; se
   return <form onSubmit={submitSearch}><label>Search snacks<input type="search" value={query} onChange={(event) => setQuery(event.target.value)} /></label><button className="secondary-button compact" disabled={busy || query.trim().length < 3}>{busy ? "Searching…" : "Search"}</button></form>;
 }
 
+function FantasyRules() {
+  return <details className="fantasy-rules"><summary><span>How fantasy works</span><small>League, draft, and scoring rules</small></summary><ol>
+    <li><h3>Build a league</h3><p>Private leagues have 4–8 managers. Join with the league code; only the creator starts each season.</p></li>
+    <li><h3>Draft a shelf</h3><p>Draft five snacks from five different categories in a randomized, five-round snake draft. Each snack belongs to only one manager that season.</p></li>
+    <li><h3>Take your turn</h3><p>Each pick gets three business hours, counted from 9 AM–5 PM Eastern on weekdays. Turn and reminder emails keep the draft moving.</p></li>
+    <li><h3>Set an auto-pick</h3><p>If time expires, your highest eligible queued snack wins. Otherwise, the best eligible catalog or reserve snack fills the open category.</p></li>
+    <li><h3>Score points</h3><p>Scoring starts the first Monday after the draft and runs for two Monday–Friday weeks. Each log or upvote from someone else earns one point; weekends and your own activity do not score.</p></li>
+    <li><h3>Win the season</h3><p>Rosters stay fixed during scoring. Every manager tied for first is a Fantasy Champion, and the creator can start the next season after completion.</p></li>
+  </ol></details>;
+}
+
 function LockedFantasy({ feature }: { feature: FantasyFeatureState }) {
   const metrics = [
     { label: "Pilot weeks", value: `${feature.weeksObserved}/4`, pass: feature.weeksObserved >= 4 },
@@ -203,7 +215,7 @@ function LockedFantasy({ feature }: { feature: FantasyFeatureState }) {
     { label: "User growth", value: feature.weeklyUserGrowth ? "Growing" : "Waiting", pass: feature.weeklyUserGrowth },
     { label: "Logs / week", value: String(feature.averageLogsPerUserWeek), pass: feature.averageLogsPerUserWeek >= 3 },
   ];
-  return <div className="fantasy-screen locked-fantasy"><header className="fantasy-hero"><p className="section-label">Fantasy league</p><h1>Earn the unlock.</h1><p>The draft room stays closed until Snack Squad proves four weeks of healthy daily participation.</p></header><div className="pilot-meter">{metrics.map((metric) => <div className={metric.pass ? "passed" : ""} key={metric.label}><span>{metric.label}</span><b>{metric.value}</b><small>{metric.pass ? "Ready" : "Not yet"}</small></div>)}</div><p className="lock-note">A moderator reviews these signals before enabling fantasy. The gate never opens automatically.</p></div>;
+  return <div className="fantasy-screen locked-fantasy"><header className="fantasy-hero"><p className="section-label">Fantasy league</p><h1>Earn the unlock.</h1><p>The draft room stays closed until Snack Squad proves four weeks of healthy daily participation.</p></header><FantasyRules /><div className="pilot-meter">{metrics.map((metric) => <div className={metric.pass ? "passed" : ""} key={metric.label}><span>{metric.label}</span><b>{metric.value}</b><small>{metric.pass ? "Ready" : "Not yet"}</small></div>)}</div><p className="lock-note">A moderator reviews these signals before enabling fantasy. The gate never opens automatically.</p></div>;
 }
 
 function SeasonSummary({ overview, currentUserId, isCreator, busy, onRestart }: { overview: FantasyOverview; currentUserId: string; isCreator: boolean; busy: boolean; onRestart: () => void }) {

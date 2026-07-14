@@ -294,6 +294,18 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
 .fantasy-hero { max-width:900px; padding-bottom:32px; border-bottom:var(--rule); }
 .fantasy-hero h1 { max-width:820px; font-size:clamp(3rem,8vw,6rem); line-height:.9; }
 .fantasy-hero p:last-child { max-width:680px; color:var(--receipt); line-height:1.55; }
+.fantasy-rules { margin-top:30px; border:var(--rule); background:var(--board); }
+.fantasy-rules summary { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:18px 20px; cursor:pointer; list-style:none; }
+.fantasy-rules summary::-webkit-details-marker { display:none; }
+.fantasy-rules summary::after { content:"+"; color:var(--yellow); font:2rem/1 "Arial Narrow",sans-serif; }
+.fantasy-rules[open] summary::after { content:"−"; }
+.fantasy-rules summary span { font-family:"Arial Narrow",sans-serif; font-size:1.4rem; font-weight:800; text-transform:uppercase; }
+.fantasy-rules summary small { margin-left:auto; color:var(--receipt); text-transform:uppercase; }
+.fantasy-rules ol { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; margin:0; padding:1px 0 0; list-style:none; background:var(--shelf); counter-reset:fantasy-rule; }
+.fantasy-rules li { min-height:190px; padding:20px; background:var(--board); counter-increment:fantasy-rule; }
+.fantasy-rules li::before { content:"0" counter(fantasy-rule); color:var(--yellow); font-weight:800; }
+.fantasy-rules h3 { margin:28px 0 8px; font-size:1rem; text-transform:uppercase; }
+.fantasy-rules p { margin:0; color:var(--receipt); line-height:1.55; }
 .pilot-meter { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; margin-top:34px; border:var(--rule); background:var(--shelf); }
 .pilot-meter div { min-height:150px; display:grid; align-content:space-between; padding:16px; background:var(--board); }
 .pilot-meter span,.pilot-meter small { color:var(--receipt); font-size:.75rem; text-transform:uppercase; }
@@ -405,6 +417,9 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
   .champion-strip { grid-template-columns: 1fr; gap: 4px; }
   .fantasy-screen { padding:28px 14px; }
   .pilot-meter { grid-template-columns:repeat(5,minmax(130px,1fr)); overflow-x:auto; }
+  .fantasy-rules summary small { display:none; }
+  .fantasy-rules ol { grid-template-columns:1fr; }
+  .fantasy-rules li { min-height:0; }
   .fantasy-onboarding,.draft-room,.active-fantasy { grid-template-columns:1fr; }
   .league-switcher,.draft-lobby { align-items:stretch; flex-direction:column; }
   .draft-status { grid-template-columns:1fr 1fr; }
