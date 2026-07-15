@@ -162,6 +162,7 @@ assert.deepEqual(await mixedResponse.json(), {
   products: [{
     providerId: "4",
     name: "Valid pretzel",
+    category: "Grains/Bakery",
     sourceUrl: "https://fdc.nal.usda.gov/fdc-app.html#/food-details/4/nutrients",
     nutritionComplete: false,
   }],

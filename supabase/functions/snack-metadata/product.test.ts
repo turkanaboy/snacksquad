@@ -38,6 +38,8 @@ assert.deepEqual(mapUsdaFoods([{ brandOwner: "Fallback Brand" }], "cheese"), [{
   nutritionComplete: false,
 }]);
 assert.equal(mapUsdaFoods([{ foodCategory: "Cheese" }], "cheese")[0].category, "Dairy");
+assert.equal(mapUsdaFoods([{ description: "Celery, raw" }], "celery")[0].category, "Vegetables");
+assert.equal(mapUsdaFoods([{ description: "Nutella" }], "nutella")[0].category, undefined);
 assert.equal(mapUsdaFoods([{ foodCategory: "Fruits and Fruit Juices" }], "banana")[0].category, "Fruit");
 assert.equal(mapUsdaFoods([{ foodCategory: "Candy" }], "candy")[0].category, "Candy/Sweets");
 assert.equal(mapUsdaFoods([{ foodCategory: "Chips, Pretzels & Snacks" }], "chips")[0].category, "Chips/Savory Snacks");

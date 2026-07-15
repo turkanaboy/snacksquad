@@ -98,7 +98,7 @@ function mapSnackCategory(category: string): SnackCategory {
   if (/fruit|apple|banana|berry|berries|orange|grape|melon/.test(value)) return "Fruit";
   if (/vegetable|carrot|celery|broccoli|cucumber|tomato/.test(value)) return "Vegetables";
   if (/milk|cheese|yogurt|dairy|cream/.test(value)) return "Dairy";
-  if (/meat|fish|egg|nut|seed|legume|bean|protein/.test(value)) return "Protein";
+  if (/meat|fish|egg|\bnuts?\b|peanut|almond|cashew|walnut|pistachio|\bseeds?\b|legume|bean|protein/.test(value)) return "Protein";
   if (/bread|bakery|cracker|cereal|grain|pretzel|cookie|biscuit/.test(value)) return "Grains/Bakery";
   return "Other";
 }
@@ -118,6 +118,8 @@ export function mapUsdaFoods(foods: UsdaFood[], fallbackName: string) {
   return foods.map((food) => {
     const brand = text(food.brandName) ?? text(food.brandOwner);
     const sourceCategory = text(food.foodCategory, 120);
+    const categorySource = `${sourceCategory ?? ""} ${text(food.description) ?? ""}`.trim();
+    const category = categorySource ? mapSnackCategory(categorySource) : undefined;
     const barcode = normalizeGtin(food.gtinUpc);
     const rawFdcId = typeof food.fdcId === "number" || typeof food.fdcId === "string" ? String(food.fdcId) : "";
     const hasProviderId = /^\d+$/.test(rawFdcId);
@@ -129,7 +131,8 @@ export function mapUsdaFoods(foods: UsdaFood[], fallbackName: string) {
       ...(hasProviderId ? { providerId: rawFdcId } : {}),
       name: text(food.description) ?? text(fallbackName) ?? "Unknown snack",
       ...(brand ? { brand } : {}),
-      ...(sourceCategory ? { category: mapSnackCategory(sourceCategory), sourceCategories: [sourceCategory] } : {}),
+      ...(category && (sourceCategory || category !== "Other") ? { category } : {}),
+      ...(sourceCategory ? { sourceCategories: [sourceCategory] } : {}),
       ...(barcode ? { barcode } : {}),
       ...(sourceUrl ? { sourceUrl } : {}),
       nutritionComplete: nutritionIsComplete(food.foodNutrients),
