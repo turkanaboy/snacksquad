@@ -19,6 +19,7 @@ import {
 } from "./snackStore";
 import { saveSelectedSnack, submitSnackCorrection, type SnackMetadata } from "./snackMetadata";
 import { hasSupabaseConfig, supabase } from "./supabaseClient";
+import { appViewFromSearch, searchForAppView } from "./appView";
 
 function initialAuthError() {
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -43,7 +44,7 @@ const magicLinkDestination = () => {
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [view, setView] = useState<AppView>(() => requestedLeague() ? "fantasy" : "home");
+  const [view, setView] = useState<AppView>(() => appViewFromSearch(window.location.search));
   const [board, setBoard] = useState<BoardEntry[]>([]);
   const [hasMoreBoard, setHasMoreBoard] = useState(false);
   const [loadingMoreBoard, setLoadingMoreBoard] = useState(false);
@@ -96,6 +97,12 @@ export default function App() {
     });
     return observeSession(supabase, setSession);
   }, []);
+
+  useEffect(() => {
+    const nextSearch = searchForAppView(window.location.search, view);
+    if (nextSearch === window.location.search) return;
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${nextSearch}${window.location.hash}`);
+  }, [view]);
 
   useEffect(() => {
     if (!supabase || !session) {
