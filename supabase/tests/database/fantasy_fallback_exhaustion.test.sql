@@ -3,7 +3,7 @@ create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select plan(8);
 
-select is((select count(*) from public.fantasy_fallback_products),40::bigint,'reserve contains forty products');
+select is((select count(*) from public.fantasy_fallback_products),48::bigint,'reserve contains forty-eight products');
 select is((select min(products) from (select count(*) products from public.fantasy_fallback_products group by category) counts),8::bigint,'every reserve category contains eight products');
 
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
