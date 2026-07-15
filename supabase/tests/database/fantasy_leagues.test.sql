@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
-select plan(51);
+select plan(57);
 
 select has_table('public','fantasy_leagues','fantasy leagues are persisted');
 select has_table('public','fantasy_league_members','private league membership is persisted');
@@ -20,6 +20,7 @@ select has_function('public','set_fantasy_preferences',array['uuid','uuid[]'],'m
 select hasnt_function('public','submit_fantasy_waiver',array['uuid','uuid','uuid','timestamp with time zone'],'timestamp waiver API is removed');
 select hasnt_function('public','submit_fantasy_waiver',array['uuid','uuid','uuid'],'server-clock waiver API is removed');
 select has_function('public','fantasy_standings',array['uuid'],'fantasy points derive from source activity');
+select has_function('public','fantasy_roster_category',array['snack_category'],'fixed roster categories are mapped centrally');
 select has_function('public','reconcile_fantasy',array['timestamp with time zone'],'expired clocks and seasons reconcile idempotently');
 select ok(not has_function_privilege('authenticated','public.start_fantasy_draft(uuid,timestamp with time zone)','EXECUTE'),'authenticated callers cannot spoof draft time');
 select ok(not has_function_privilege('authenticated','public.submit_fantasy_pick(uuid,uuid,timestamp with time zone)','EXECUTE'),'authenticated callers cannot spoof pick time');
@@ -42,11 +43,17 @@ select results_eq($$select public.fantasy_add_business_hours('2026-07-04 14:00+0
 select results_eq($$select public.fantasy_next_monday('2026-07-06 14:00+00')$$,$$values('2026-07-13 04:00+00'::timestamptz)$$,'Monday completion starts scoring the following Monday');
 select results_eq($$select public.fantasy_next_monday('2026-07-10 20:00+00')$$,$$values('2026-07-13 04:00+00'::timestamptz)$$,'Friday completion starts scoring the next Monday');
 select results_eq($$select public.fantasy_next_monday('2026-07-12 14:00+00')$$,$$values('2026-07-13 04:00+00'::timestamptz)$$,'Sunday completion starts scoring the next Monday');
+select is(public.fantasy_roster_category('Vegetables'::public.snack_category),'Vegetable','vegetables fill the vegetable roster slot');
+select is(public.fantasy_roster_category('Candy/Sweets'::public.snack_category),'Candy/Chips','candy fills the shared candy and chips slot');
+select is(public.fantasy_roster_category('Chips/Savory Snacks'::public.snack_category),'Candy/Chips','chips fill the shared candy and chips slot');
+select is(public.fantasy_roster_category('Dairy'::public.snack_category),null,'categories outside the five fixed slots are ineligible');
 
 update public.feature_flags set enabled=true where key='fantasy_enabled';
 insert into public.snacks(name,normalized_name,category,source_type,created_by)
 select category||' '||n,lower(category||' '||n),category::public.snack_category,'manual','13000000-0000-0000-0000-000000000001'
-from unnest(array['Grains/Bakery','Protein','Dairy','Fruit','Vegetables']) category cross join generate_series(1,8)n;
+from unnest(array['Grains/Bakery','Protein','Candy/Sweets','Fruit','Vegetables']) category cross join generate_series(1,8)n;
+insert into public.snacks(name,normalized_name,category,source_type,created_by)
+values('Dairy test snack','dairy test snack','Dairy','manual','13000000-0000-0000-0000-000000000001');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','13000000-0000-0000-0000-000000000001',true);
@@ -74,10 +81,12 @@ select is((select public.fantasy_current_picker(id,5) from public.fantasy_season
 select is((select public.fantasy_current_picker(id,8) from public.fantasy_seasons),(select user_id from public.fantasy_draft_order where position=1),'second round ends back at position one');
 
 select set_config('request.jwt.claim.sub',(select public.fantasy_current_picker(id,1)::text from public.fantasy_seasons),true);
-select lives_ok($$select public.submit_fantasy_pick((select id from public.fantasy_seasons),(select id from public.snacks order by normalized_name limit 1),'2026-07-01 14:00+00')$$,'on-clock manager drafts manually');
+select lives_ok($$select public.submit_fantasy_pick((select id from public.fantasy_seasons),(select id from public.snacks where normalized_name='grains/bakery 1'),'2026-07-01 14:00+00')$$,'on-clock manager drafts manually');
 select is((select count(*)::bigint from public.fantasy_picks),1::bigint,'manual pick is persisted once');
 select lives_ok($$select public.auto_pick_fantasy((select id from public.fantasy_seasons),(select pick_deadline from public.fantasy_seasons))$$,'expired next pick falls back to the leaderboard catalog');
 select is((select count(*)::bigint from public.fantasy_picks where was_auto_pick),1::bigint,'auto-pick is marked in history');
+select set_config('request.jwt.claim.sub',(select public.fantasy_current_picker(id,current_pick)::text from public.fantasy_seasons),true);
+select throws_ok($$select public.submit_fantasy_pick((select id from public.fantasy_seasons),(select id from public.snacks where normalized_name='dairy test snack'),(select pick_deadline from public.fantasy_seasons))$$,'P0001','Fantasy teams use only Grains/Bakery, Fruit, Vegetable, Candy/Chips, and Protein.','an ineligible category cannot be drafted');
 
 update public.fantasy_seasons set status='active',scoring_starts_at='2026-07-01 13:00+00',scoring_ends_at='2026-07-15 04:00+00',pick_deadline=null where true;
 insert into public.snack_logs(id,user_id,snack_id,logged_at) values

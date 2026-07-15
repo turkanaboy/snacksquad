@@ -4,6 +4,9 @@ type RpcClient = Pick<SupabaseClient, "rpc">;
 export type FantasyFeatureState = { enabled: boolean; weeksObserved: number; dailyActiveUsers: number; fullBracketParticipation: boolean; weeklyUserGrowth: boolean; averageLogsPerUserWeek: number };
 export type FantasyLeague = { id: string; name: string; joinCode: string; memberCount: number; isCreator: boolean };
 export type FantasyRosterSlot = { userId: string; snackId: string; snackName: string; category: string };
+export const FANTASY_ROSTER_CATEGORIES = ["Grains/Bakery", "Fruit", "Vegetable", "Candy/Chips", "Protein"] as const;
+export type FantasyRosterCategory = typeof FANTASY_ROSTER_CATEGORIES[number];
+export type FantasyTeamSlot = { category: FantasyRosterCategory; snack: FantasyRosterSlot | null };
 export type FantasyOverview = {
   league: { id: string; name: string; joinCode: string };
   members: Array<{ userId: string; displayName: string }>;
@@ -14,9 +17,18 @@ export type FantasyOverview = {
   standings: Array<{ userId: string; points: number }>;
 };
 
-export function fantasyTeamSlots(roster: FantasyRosterSlot[], userId: string): Array<FantasyRosterSlot | null> {
-  const filled = roster.filter((slot) => slot.userId === userId).slice(0, 5);
-  return [...filled, ...Array.from({ length: 5 - filled.length }, () => null)];
+export function fantasyRosterCategory(category: string | undefined): FantasyRosterCategory | null {
+  if (category === "Vegetables") return "Vegetable";
+  if (category === "Candy/Sweets" || category === "Chips/Savory Snacks") return "Candy/Chips";
+  return FANTASY_ROSTER_CATEGORIES.find((candidate) => candidate === category) || null;
+}
+
+export function fantasyTeamSlots(roster: FantasyRosterSlot[], userId: string): FantasyTeamSlot[] {
+  const mine = roster.filter((slot) => slot.userId === userId);
+  return FANTASY_ROSTER_CATEGORIES.map((category) => ({
+    category,
+    snack: mine.find((slot) => fantasyRosterCategory(slot.category) === category) || null,
+  }));
 }
 
 export async function getFantasyFeatureState(client: RpcClient): Promise<FantasyFeatureState> {

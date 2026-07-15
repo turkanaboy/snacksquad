@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createFantasyLeague,
+  fantasyRosterCategory,
   fantasyTeamSlots,
   getFantasyOverview,
   getMyFantasyLeagues,
@@ -179,10 +180,15 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
                 <section className="draft-room">
                   <div className="draft-board"><h2>Pick history</h2>{overview?.picks.length ? <ol>{overview.picks.map((pick) => <li key={pick.pickNumber}><span>{pick.pickNumber}</span><b>{pick.snackName}</b><small>{overview.members.find((member) => member.userId === pick.userId)?.displayName || "Unknown manager"} · {pick.category}{pick.wasAutoPick ? " · auto-pick" : ""}</small></li>)}</ol> : <p className="empty-state">The first manager is on the clock.</p>}</div>
                   <div className="draft-actions">
-                    <div className="my-roster draft-team"><h2>Your current team</h2><ul>{teamSlots.map((slot, index) => slot ? <li key={slot.snackId}><span><b>{slot.snackName}</b><small>{slot.category}</small></span></li> : <li className="open-slot" key={`open-${index}`}><span><b>Open category</b><small>Draft from a new category</small></span></li>)}</ul></div>
+                    <div className="my-roster draft-team"><h2>Your current team</h2><ul>{teamSlots.map((slot) => slot.snack ? <li key={slot.category}><span><b>{slot.snack.snackName}</b><small>{slot.category}</small></span></li> : <li className="open-slot" key={slot.category}><span><b>Open</b><small>{slot.category}</small></span></li>)}</ul></div>
                     <h2>{myTurn ? "You’re on the clock" : "Build your auto-pick queue"}</h2>
                     <SearchForm query={query} setQuery={setQuery} busy={busy} submitSearch={submitSearch} />
-                    {results.length ? <ul className="fantasy-search">{results.map((snack, index) => <li key={snack.id || snack.providerId || snack.barcode || `${snack.name}-${index}`}><span><b>{snack.name}</b><small>{snack.category}</small></span><button type="button" className="text-button" disabled={busy} onClick={() => void choose(snack, myTurn ? "pick" : "preference")}>{myTurn ? "Draft" : "Add to queue"}</button></li>)}</ul> : null}
+                    {results.length ? <ul className="fantasy-search">{results.map((snack, index) => {
+                      const category = fantasyRosterCategory(snack.category);
+                      const slotOpen = category ? teamSlots.some((slot) => slot.category === category && !slot.snack) : false;
+                      const action = !category ? "Not eligible" : !slotOpen ? "Slot filled" : myTurn ? "Draft" : "Add to queue";
+                      return <li key={snack.id || snack.providerId || snack.barcode || `${snack.name}-${index}`}><span><b>{snack.name}</b><small>{category || snack.category}</small></span><button type="button" className="text-button" disabled={busy || !slotOpen} onClick={() => void choose(snack, myTurn ? "pick" : "preference")}>{action}</button></li>;
+                    })}</ul> : null}
                     {preferences.length ? <div className="preference-queue"><h3>Auto-pick order</h3><ol>{preferences.map((snack) => <li key={snack.id}>{snack.name}<button type="button" className="text-button" onClick={() => setPreferences((current) => current.filter((item) => item.id !== snack.id))}>Remove</button></li>)}</ol><button className="secondary-button" disabled={busy} onClick={() => void act(() => setFantasyPreferences(client, season.id, preferences.map((snack) => snack.id!)))}>Save queue</button></div> : null}
                   </div>
                 </section>
@@ -202,7 +208,7 @@ function SearchForm({ query, setQuery, busy, submitSearch }: { query: string; se
 function FantasyRules() {
   return <details className="fantasy-rules"><summary><span>How fantasy works</span><small>League, draft, and scoring rules</small></summary><ol>
     <li><h3>Build a league</h3><p>Private leagues have 4–8 managers. Join with the league code; only the creator starts each season.</p></li>
-    <li><h3>Draft a shelf</h3><p>Draft five snacks from five different categories in a randomized, five-round snake draft. Each snack belongs to only one manager that season.</p></li>
+    <li><h3>Draft a shelf</h3><p>Fill one slot each for Grains/Bakery, Fruit, Vegetable, Candy/Chips, and Protein in a randomized snake draft. Each snack belongs to only one manager that season.</p></li>
     <li><h3>Take your turn</h3><p>Each pick gets three business hours, counted from 9 AM–5 PM Eastern on weekdays. Turn and reminder emails keep the draft moving.</p></li>
     <li><h3>Set an auto-pick</h3><p>If time expires, your highest eligible queued snack wins. Otherwise, the best eligible catalog or reserve snack fills the open category.</p></li>
     <li><h3>Score points</h3><p>Scoring starts the first Monday after the draft and runs for two Monday–Friday weeks. Each log or upvote from someone else earns one point; weekends and your own activity do not score.</p></li>
@@ -222,7 +228,7 @@ function LockedFantasy({ feature }: { feature: FantasyFeatureState }) {
 }
 
 function SeasonSummary({ overview, currentUserId, isCreator, busy, onRestart }: { overview: FantasyOverview; currentUserId: string; isCreator: boolean; busy: boolean; onRestart: () => void }) {
-  const mine = overview.roster.filter((slot) => slot.userId === currentUserId);
+  const mine = fantasyTeamSlots(overview.roster, currentUserId);
   const scheduled = overview.season?.status === "active" && overview.season.scoringStartsAt && new Date(overview.season.scoringStartsAt) > new Date();
-  return <section className="active-fantasy"><div className="standings"><h2>{scheduled ? "Scoring starts soon" : overview.season?.status === "complete" ? "Final standings" : "Standings"}</h2>{scheduled ? <p>Season {overview.season?.seasonNumber} begins {new Date(overview.season!.scoringStartsAt!).toLocaleString()}.</p> : <ol>{overview.standings.map((standing, index) => <li key={standing.userId}><span>{index + 1}</span><b>{overview.members.find((member) => member.userId === standing.userId)?.displayName}</b><strong>{standing.points}</strong></li>)}</ol>}{overview.season?.status === "complete" && isCreator ? <button className="primary-button" disabled={busy} onClick={onRestart}>Start next season</button> : null}</div><div className="my-roster"><h2>Your fixed roster</h2><ul>{mine.map((slot) => <li key={slot.category}><span><b>{slot.snackName}</b><small>{slot.category}</small></span></li>)}</ul><p className="empty-state">Rosters stay fixed through both scoring weeks.</p></div></section>;
+  return <section className="active-fantasy"><div className="standings"><h2>{scheduled ? "Scoring starts soon" : overview.season?.status === "complete" ? "Final standings" : "Standings"}</h2>{scheduled ? <p>Season {overview.season?.seasonNumber} begins {new Date(overview.season!.scoringStartsAt!).toLocaleString()}.</p> : <ol>{overview.standings.map((standing, index) => <li key={standing.userId}><span>{index + 1}</span><b>{overview.members.find((member) => member.userId === standing.userId)?.displayName}</b><strong>{standing.points}</strong></li>)}</ol>}{overview.season?.status === "complete" && isCreator ? <button className="primary-button" disabled={busy} onClick={onRestart}>Start next season</button> : null}</div><div className="my-roster"><h2>Your fixed roster</h2><ul>{mine.map((slot) => slot.snack ? <li key={slot.category}><span><b>{slot.snack.snackName}</b><small>{slot.category}</small></span></li> : <li className="open-slot" key={slot.category}><span><b>Open</b><small>{slot.category}</small></span></li>)}</ul><p className="empty-state">Rosters stay fixed through both scoring weeks.</p></div></section>;
 }
