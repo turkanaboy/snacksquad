@@ -222,7 +222,7 @@ export default function App() {
           replacing={Boolean(editingLog)}
           onLog={logSnack}
           onManualLog={logManual}
-          onSuggestCorrection={(snackId, name, reason) => submitSnackCorrection(client, snackId, { name }, reason)}
+          onSuggestCorrection={(snackId, changes, reason) => submitSnackCorrection(client, snackId, changes, reason)}
         />
       ) : null}
       {view === "profile" ? (
