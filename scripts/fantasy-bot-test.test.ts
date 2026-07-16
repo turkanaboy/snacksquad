@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { botEmail,cleanupConfirmed,validateTarget } from "./fantasy-bot-test";
+import { botEmail,cleanupConfirmed,sendsNotifications,validateTarget } from "./fantasy-bot-test";
 const id="12345678-1234-1234-1234-123456789abc";
 assert.equal(botEmail(id,2),"fantasy-bot-12345678-2@snacksquad.test");
 assert.equal(cleanupConfirmed(id,["--execute","--confirm",id]),true);
@@ -7,4 +7,6 @@ assert.equal(cleanupConfirmed(id,["--confirm",id]),false);
 assert.equal(cleanupConfirmed(id,["--execute","--confirm","wrong"]),false);
 assert.doesNotThrow(()=>validateTarget(["--local"],"http://127.0.0.1:54321"));
 assert.throws(()=>validateTarget(["--live"],"http://127.0.0.1:54321"),/refuses/);
+assert.equal(sendsNotifications(["--local"]),false);
+assert.equal(sendsNotifications(["--live"]),true);
 console.log("fantasy bot CLI tests passed");

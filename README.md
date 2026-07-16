@@ -28,6 +28,8 @@ The seed inserts fake Auth users and application history. Only run it in a demo 
 
 ## Verification
 
+Browser E2E and hosted-smoke setup live in [`docs/testing.md`](docs/testing.md).
+
 ```powershell
 npm.cmd run typecheck
 npm.cmd test
