@@ -1,5 +1,15 @@
 # Snack Squad pilot runbook
 
+Run the non-destructive hosted browser check before coordinated pilot mutations:
+
+```powershell
+$env:E2E_HOSTED_BASE_URL = "https://approved-host.example"
+Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY -ErrorAction SilentlyContinue
+npm.cmd run test:e2e:production
+```
+
+The smoke check does not replace the mutation steps below; see [`testing.md`](testing.md) for its boundary.
+
 ## Before cutover
 
 - Confirm every legacy application table is empty. The overhaul intentionally stops rather than discarding data.

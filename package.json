@@ -8,16 +8,19 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
     "test": "tsx src/appView.test.ts && tsx src/profile.test.ts && tsx src/snackStore.test.ts && tsx src/snackMetadata.test.ts && tsx src/contestStore.test.ts && tsx src/fantasyStore.test.ts && tsx supabase/functions/snack-metadata/product.test.ts && tsx supabase/functions/snack-metadata/index.test.ts && tsx supabase/functions/fantasy-notifications/index.test.ts && tsx scripts/fantasy-bot-test.test.ts",
+    "test:e2e": "playwright test --project=desktop-chromium --project=mobile-chromium",
+    "test:e2e:production": "playwright test --project=production-smoke",
     "fantasy:bot": "tsx scripts/fantasy-bot-test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.0.7",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "vite": "^6.0.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

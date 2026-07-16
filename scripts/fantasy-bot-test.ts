@@ -10,6 +10,7 @@ export function validateTarget(args:string[],url:string){
   if(args.includes("--local")&&!local)throw new Error("--local requires a local Supabase URL.");
   if(args.includes("--live")&&local)throw new Error("--live refuses a local Supabase URL.");
 }
+export const sendsNotifications = (args:string[]) => args.includes("--live");
 
 const required = (name: string) => {
   const value=process.env[name]?.trim();
@@ -60,7 +61,7 @@ async function run(args:string[]) {
   for(const bot of bots.slice(1)) await rpc(bot.client,"join_fantasy_league",{p_join_code:joinCode});
   await rpc(admin,"link_fantasy_test_league",{p_run_id:runId,p_league_id:leagueId});
   await rpc(bots[0].client,"start_fantasy_draft",{p_league_id:leagueId});
-  await invokeSender();
+  if(sendsNotifications(args)) await invokeSender();
 
   let overview=await rpc<any>(bots[0].client,"fantasy_overview",{p_league_id:leagueId});
   let pickerId=overview.draftOrder.find((entry:any)=>entry.position===1).user_id as string;
@@ -72,7 +73,7 @@ async function run(args:string[]) {
   snackId=await rpc<string>(admin,"prepare_fantasy_test_snack",{p_run_id:runId,p_user_id:pickerId});
   await rpc(bots.find(bot=>bot.id===pickerId)!.client,"set_fantasy_preferences",{p_season_id:overview.season.id,p_snack_ids:[snackId]});
   await new Promise(resolve=>setTimeout(resolve,61_000));
-  await invokeSender();
+  if(sendsNotifications(args)) await invokeSender();
   await rpc(admin,"advance_fantasy_test_draft",{p_run_id:runId,p_count:40});
 
   overview=await rpc<any>(bots[0].client,"fantasy_overview",{p_league_id:leagueId});

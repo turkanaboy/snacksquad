@@ -5,3 +5,5 @@ dist/
 *.tsbuildinfo
 supabase/.temp/
 supabase/functions/.env
+playwright-report/
+test-results/
