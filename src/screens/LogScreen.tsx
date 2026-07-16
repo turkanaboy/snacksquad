@@ -14,7 +14,7 @@ type Props = {
   replacing?: boolean;
   onLog: (snack: SnackMetadata) => Promise<void>;
   onManualLog: (name: string, category: string) => Promise<void>;
-  onSuggestCorrection: (snackId: string, name: string, reason: string) => Promise<void>;
+  onSuggestCorrection: (snackId: string, changes: Record<string, string>, reason: string) => Promise<void>;
 };
 
 export function LogScreen({ client, initialQuery, replacing = false, onLog, onManualLog, onSuggestCorrection }: Props) {
@@ -28,6 +28,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
   const [manualCategory, setManualCategory] = useState("Other");
   const [correction, setCorrection] = useState<SnackMetadata | null>(null);
   const [correctionName, setCorrectionName] = useState("");
+  const [correctionCategory, setCorrectionCategory] = useState("Other");
   const [correctionReason, setCorrectionReason] = useState("");
   const [message, setMessage] = useState("");
 
@@ -97,9 +98,17 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
   async function submitCorrection(event: FormEvent) {
     event.preventDefault();
     if (!correction?.id) return;
+    const changes = {
+      ...(correctionName.trim() !== correction.name ? { name: correctionName } : {}),
+      ...(correctionCategory !== correction.category ? { category: correctionCategory } : {}),
+    };
+    if (!Object.keys(changes).length) {
+      setMessage("Change the name or category before sending.");
+      return;
+    }
     setBusyKey("correction");
     try {
-      await onSuggestCorrection(correction.id, correctionName, correctionReason);
+      await onSuggestCorrection(correction.id, changes, correctionReason);
       setMessage("Correction sent to a Snack Squad moderator.");
       setCorrection(null);
       setCorrectionReason("");
@@ -150,6 +159,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
                   <button className="text-button" onClick={() => {
                     setCorrection(snack);
                     setCorrectionName(snack.name);
+                    setCorrectionCategory(snack.category || "Other");
                     setCorrectionReason("");
                   }}>Suggest correction</button>
                 ) : null}
@@ -175,6 +185,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
         <form className="correction-form" onSubmit={submitCorrection}>
           <div><p className="section-label">Catalog correction</p><h2>{correction.name}</h2></div>
           <label>Corrected name<input value={correctionName} onChange={(event) => setCorrectionName(event.target.value)} required /></label>
+          <label>Corrected category<select value={correctionCategory} onChange={(event) => setCorrectionCategory(event.target.value)}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
           <label>What changed?<textarea value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} required /></label>
           <div className="button-row"><button className="primary-button" disabled={busyKey === "correction"}>Send correction</button><button type="button" className="text-button" onClick={() => setCorrection(null)}>Cancel</button></div>
         </form>

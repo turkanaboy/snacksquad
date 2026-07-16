@@ -61,8 +61,11 @@ test("logs, reacts, protects private rows, replaces, deletes, and moderates", as
   const searchResult = jordan.page.locator(".search-result").filter({ hasText: replacement });
   await expect(searchResult).toBeVisible();
   await searchResult.getByRole("button", { name: "Suggest correction" }).click();
-  await jordan.page.getByLabel("Corrected name").fill(`${replacement} Approved`);
   await jordan.page.getByLabel("What changed?").fill(`E2E correction ${suffix}`);
+  await jordan.page.getByRole("button", { name: "Send correction" }).click();
+  await expect(jordan.page.locator(".error-message")).toContainText("Change the name or category");
+  await jordan.page.getByLabel("Corrected name").fill(`${replacement} Approved`);
+  await jordan.page.getByLabel("Corrected category").selectOption("Protein");
   await jordan.page.getByRole("button", { name: "Send correction" }).click();
   await expect(jordan.page.locator(".success-message")).toContainText("Correction sent");
   await expect(jordan.page.locator(".global-notice")).toHaveCount(0);
@@ -74,6 +77,8 @@ test("logs, reacts, protects private rows, replaces, deletes, and moderates", as
   const correction = page.locator(".correction-list li").filter({ hasText: `E2E correction ${suffix}` });
   await correction.getByRole("button", { name: "Approve" }).click();
   await expect(page.locator(".status-message")).toContainText("Correction approved");
+  await jordan.page.getByLabel("Brand, product, or barcode").fill(`${replacement} Approved`);
+  await expect(jordan.page.locator(".search-result").filter({ hasText: `${replacement} Approved` })).toContainText("Protein");
 
   await jordan.context.close();
 });
