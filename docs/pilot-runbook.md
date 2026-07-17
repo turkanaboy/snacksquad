@@ -19,10 +19,18 @@ The smoke check does not replace the mutation steps below; see [`testing.md`](te
 - Set `USDA_API_KEY` and deploy `snack-metadata`.
 - Set `RESEND_API_KEY`, `FANTASY_EMAIL_FROM`, and `SITE_URL`, then deploy `fantasy-notifications --no-verify-jwt`.
 - Set the same random `FANTASY_CRON_SECRET` value in Edge Function secrets and Vault as `snack_squad_fantasy_cron_secret`; add `snack_squad_project_url` to Vault and confirm the `fantasy-notification-sender` Cron job runs each minute.
-- Configure the frontend host to send Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and Permissions-Policy headers; the exact CSP must allow the selected Supabase project and approved USDA image hosts.
+- Confirm the production deployment applies the security headers in `vercel.json`: Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and Permissions-Policy.
 - Add at least one moderator in `public.moderators` after their first login.
 - Confirm the `snack-squad-competition-reconciler` Cron job runs every five minutes without errors.
 - Confirm `public.feature_flags.fantasy_enabled = true`; the site is intentionally unused while the bot test runs.
+
+Verify the deployed headers after each production cutover:
+
+```powershell
+$headers = (Invoke-WebRequest -Method Head https://snacksquad.vercel.app).Headers
+"Content-Security-Policy", "X-Content-Type-Options", "X-Frame-Options", "Referrer-Policy", "Permissions-Policy" |
+  ForEach-Object { if (-not $headers[$_]) { throw "Missing required response header: $_" } }
+```
 
 ## Pilot smoke test
 
