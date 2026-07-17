@@ -2,7 +2,7 @@
 
 ## Launch Blocker
 
-- [ ] Enable Supabase anonymous sign-ins in Auth settings.
+- [x] Keep Supabase anonymous sign-ins disabled for the pilot.
 
 ## MVP Polish
 
