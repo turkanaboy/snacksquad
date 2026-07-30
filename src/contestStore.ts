@@ -138,6 +138,34 @@ export async function castBracketVote(client: RpcClient, matchupId: string, entr
   if (result.error) throw result.error;
 }
 
+export type BracketPlacement = { entryId: string; snackName: string };
+export type BracketArchive = {
+  weekId: string;
+  weekStart: string;
+  firstPlace: BracketPlacement;
+  secondPlace: BracketPlacement;
+  thirdPlace: BracketPlacement[];
+};
+
+export async function getBracketArchive(client: RpcClient, limit = 12): Promise<BracketArchive[]> {
+  const result = await client.rpc("bracket_archive", { p_limit: limit });
+  if (result.error) throw result.error;
+  const placement = (value: { entry_id: string; snack_name: string }) => ({ entryId: value.entry_id, snackName: value.snack_name });
+  return (result.data || []).map((row: {
+    week_id: string;
+    week_start: string;
+    first_place: { entry_id: string; snack_name: string };
+    second_place: { entry_id: string; snack_name: string };
+    third_place: Array<{ entry_id: string; snack_name: string }>;
+  }) => ({
+    weekId: row.week_id,
+    weekStart: row.week_start,
+    firstPlace: placement(row.first_place),
+    secondPlace: placement(row.second_place),
+    thirdPlace: (row.third_place || []).map(placement),
+  }));
+}
+
 export type WeeklyReport = {
   weekId: string;
   reportDate: string;

@@ -7,14 +7,27 @@ export type FantasyRosterSlot = { userId: string; snackId: string; snackName: st
 export const FANTASY_ROSTER_CATEGORIES = ["Grains/Bakery", "Fruit", "Vegetable", "Candy/Chips", "Protein"] as const;
 export type FantasyRosterCategory = typeof FANTASY_ROSTER_CATEGORIES[number];
 export type FantasyTeamSlot = { category: FantasyRosterCategory; snack: FantasyRosterSlot | null };
+export type FantasyMember = { userId: string; displayName: string };
+export type FantasySeason = { id: string; seasonNumber: number; status: string; currentPick: number; pickDeadline: string | null; scoringStartsAt: string | null; scoringEndsAt: string | null; completedAt: string | null };
+export type FantasySeasonArchive = {
+  season: FantasySeason;
+  members: FantasyMember[];
+  roster: FantasyRosterSlot[];
+  standings: Array<{ userId: string; points: number }>;
+};
+type RawFantasyMember = { user_id: string; display_name: string };
+type RawFantasySeason = { id: string; season_number: number; status: string; current_pick: number; pick_deadline: string | null; scoring_starts_at: string | null; scoring_ends_at: string | null; completed_at: string | null };
+type RawFantasyRosterSlot = { user_id: string; snack_id: string; snack_name: string; category: string };
+type RawFantasyStanding = { user_id: string; points: number };
 export type FantasyOverview = {
   league: { id: string; name: string; joinCode: string };
-  members: Array<{ userId: string; displayName: string }>;
-  season: null | { id: string; seasonNumber: number; status: string; currentPick: number; pickDeadline: string | null; scoringStartsAt: string | null; scoringEndsAt: string | null; completedAt: string | null };
+  members: FantasyMember[];
+  season: FantasySeason | null;
   draftOrder: Array<{ userId: string; position: number }>;
   picks: Array<{ userId: string; snackId: string; snackName: string; category: string; pickNumber: number; wasAutoPick: boolean }>;
   roster: FantasyRosterSlot[];
   standings: Array<{ userId: string; points: number }>;
+  archive: FantasySeasonArchive[];
 };
 
 export function fantasyRosterCategory(category: string | undefined): FantasyRosterCategory | null {
@@ -42,7 +55,11 @@ export async function getMyFantasyLeagues(client: RpcClient): Promise<FantasyLea
 export async function getFantasyOverview(client: RpcClient, leagueId: string): Promise<FantasyOverview> {
   const result = await client.rpc("fantasy_overview",{p_league_id:leagueId}); if (result.error) throw result.error;
   const raw=result.data;
-  return { league:{id:raw.league.id,name:raw.league.name,joinCode:raw.league.join_code}, members:(raw.members||[]).map((x:{user_id:string;display_name:string})=>({userId:x.user_id,displayName:x.display_name})), season:raw.season?{id:raw.season.id,seasonNumber:Number(raw.season.season_number),status:raw.season.status,currentPick:Number(raw.season.current_pick),pickDeadline:raw.season.pick_deadline,scoringStartsAt:raw.season.scoring_starts_at,scoringEndsAt:raw.season.scoring_ends_at,completedAt:raw.season.completed_at}:null, draftOrder:(raw.draftOrder||[]).map((x:{user_id:string;position:number})=>({userId:x.user_id,position:Number(x.position)})), picks:(raw.picks||[]).map((x:{user_id:string;snack_id:string;snack_name:string;category:string;pick_number:number;was_auto_pick:boolean})=>({userId:x.user_id,snackId:x.snack_id,snackName:x.snack_name,category:x.category,pickNumber:Number(x.pick_number),wasAutoPick:x.was_auto_pick})), roster:(raw.roster||[]).map((x:{user_id:string;snack_id:string;snack_name:string;category:string})=>({userId:x.user_id,snackId:x.snack_id,snackName:x.snack_name,category:x.category})), standings:(raw.standings||[]).map((x:{user_id:string;points:number})=>({userId:x.user_id,points:Number(x.points)})) };
+  const members=(rows: RawFantasyMember[] = [])=>rows.map((x)=>({userId:x.user_id,displayName:x.display_name}));
+  const season=(x:RawFantasySeason)=>({id:x.id,seasonNumber:Number(x.season_number),status:x.status,currentPick:Number(x.current_pick),pickDeadline:x.pick_deadline,scoringStartsAt:x.scoring_starts_at,scoringEndsAt:x.scoring_ends_at,completedAt:x.completed_at});
+  const roster=(rows: RawFantasyRosterSlot[] = [])=>rows.map((x)=>({userId:x.user_id,snackId:x.snack_id,snackName:x.snack_name,category:x.category}));
+  const standings=(rows: RawFantasyStanding[] = [])=>rows.map((x)=>({userId:x.user_id,points:Number(x.points)}));
+  return { league:{id:raw.league.id,name:raw.league.name,joinCode:raw.league.join_code}, members:members(raw.members), season:raw.season?season(raw.season):null, draftOrder:(raw.draftOrder||[]).map((x:{user_id:string;position:number})=>({userId:x.user_id,position:Number(x.position)})), picks:(raw.picks||[]).map((x:{user_id:string;snack_id:string;snack_name:string;category:string;pick_number:number;was_auto_pick:boolean})=>({userId:x.user_id,snackId:x.snack_id,snackName:x.snack_name,category:x.category,pickNumber:Number(x.pick_number),wasAutoPick:x.was_auto_pick})), roster:roster(raw.roster), standings:standings(raw.standings), archive:(raw.archive||[]).map((x:{season:RawFantasySeason;members:RawFantasyMember[];roster:RawFantasyRosterSlot[];standings:RawFantasyStanding[]})=>({season:season(x.season),members:members(x.members),roster:roster(x.roster),standings:standings(x.standings)})) };
 }
 async function rpcVoid(client:RpcClient,name:string,params:Record<string,unknown>){const result=await client.rpc(name,params);if(result.error)throw result.error;return result.data;}
 export const createFantasyLeague=(client:RpcClient,name:string)=>rpcVoid(client,"create_fantasy_league",{p_name:name}) as Promise<Array<{league_id:string;join_code:string}>>;

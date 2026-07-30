@@ -285,6 +285,31 @@ from (values
 join public.bracket_entries e on e.id = '51000000-0000-0000-0000-000000000001'
 on conflict (entry_id, user_id) do nothing;
 
+insert into public.bracket_matchups (
+  id, week_id, round_number, position, left_entry_id, right_entry_id,
+  winner_entry_id, status, opens_at, closes_at, resolved_at
+)
+select
+  ('61000000-0000-0000-0000-' || lpad(matchup_ordinal::text, 12, '0'))::uuid,
+  w.id, round_number, position,
+  ('51000000-0000-0000-0000-' || lpad(left_ordinal::text, 12, '0'))::uuid,
+  ('51000000-0000-0000-0000-' || lpad(right_ordinal::text, 12, '0'))::uuid,
+  ('51000000-0000-0000-0000-' || lpad(winner_ordinal::text, 12, '0'))::uuid,
+  'resolved', now() - interval '12 days', now() - interval '11 days', now() - interval '11 days'
+from (values
+  (1, 3, 1, 1, 2, 1),
+  (2, 3, 2, 3, 4, 3),
+  (3, 4, 1, 1, 3, 1)
+) matchups(matchup_ordinal, round_number, position, left_ordinal, right_ordinal, winner_ordinal)
+cross join lateral (
+  select public.eastern_date() + case
+    when extract(isodow from public.eastern_date()) <= 4 then 1 - extract(isodow from public.eastern_date())::integer
+    else 8 - extract(isodow from public.eastern_date())::integer
+  end as target_monday
+) calendar
+join public.bracket_weeks w on w.week_start = calendar.target_monday - 7
+on conflict (id) do nothing;
+
 update public.bracket_weeks w
 set champion_entry_id = e.id
 from public.bracket_entries e

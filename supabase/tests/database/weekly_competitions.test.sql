@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(42);
+select plan(46);
 
 select has_table('public', 'bracket_weeks', 'weekly bracket state is persisted');
 select has_table('public', 'bracket_entries', 'unique weekly snacks are persisted');
@@ -15,6 +15,7 @@ select has_table('public', 'badge_tenures', 'badge ownership uses dated tenures'
 select has_table('public', 'weekly_reports', 'Friday reports are immutable history');
 select has_function('public', 'reconcile_competitions', array['timestamp with time zone'], 'one idempotent reconciler advances contest state');
 select has_function('public', 'publish_weekly_results', array['uuid','timestamp with time zone'], 'Friday results are snapshotted explicitly');
+select has_function('public', 'bracket_archive', array['integer'], 'completed bracket podiums are archived');
 select results_eq(
   $$select public.eastern_timestamp(date '2026-03-09', time '09:00')$$,
   $$values ('2026-03-09 13:00:00+00'::timestamptz)$$,
@@ -181,6 +182,18 @@ select results_eq(
   'expired tie advances the higher seed'
 );
 
+select set_config('test.third_entry_id', id::text, false)
+from public.bracket_entries
+where week_id = '42000000-0000-0000-0000-000000000001'
+  and id not in (current_setting('test.left_entry_id')::uuid,current_setting('test.right_entry_id')::uuid)
+limit 1;
+insert into public.bracket_entries(id,week_id,snack_id,seed)
+values('52000000-0000-0000-0000-000000000004','42000000-0000-0000-0000-000000000001','22000000-0000-0000-0000-000000000004',4);
+insert into public.bracket_matchups(id,week_id,round_number,position,left_entry_id,right_entry_id,winner_entry_id,status,opens_at,closes_at,resolved_at) values
+('52000000-0000-0000-0000-000000000003','42000000-0000-0000-0000-000000000001',3,1,current_setting('test.left_entry_id')::uuid,current_setting('test.right_entry_id')::uuid,current_setting('test.left_entry_id')::uuid,'resolved',now()-interval '2 hours',now()-interval '1 hour',now()-interval '1 hour'),
+('52000000-0000-0000-0000-000000000005','42000000-0000-0000-0000-000000000001',3,2,current_setting('test.third_entry_id')::uuid,'52000000-0000-0000-0000-000000000004',current_setting('test.third_entry_id')::uuid,'resolved',now()-interval '2 hours',now()-interval '1 hour',now()-interval '1 hour'),
+('52000000-0000-0000-0000-000000000006','42000000-0000-0000-0000-000000000001',4,1,current_setting('test.left_entry_id')::uuid,current_setting('test.third_entry_id')::uuid,current_setting('test.left_entry_id')::uuid,'resolved',now()-interval '2 hours',now()-interval '1 hour',now()-interval '1 hour');
+
 update public.bracket_weeks
 set champion_entry_id = current_setting('test.left_entry_id')::uuid,
     results_publish_at = now() + interval '1 second'
@@ -203,6 +216,12 @@ select lives_ok(
   $$select public.publish_weekly_results('42000000-0000-0000-0000-000000000001', now() + interval '2 seconds')$$,
   'Friday publication can be rerun safely'
 );
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '12000000-0000-0000-0000-000000000001', true);
+select is((select first_place->>'entry_id' from public.bracket_archive(4) where week_id='42000000-0000-0000-0000-000000000001'),current_setting('test.left_entry_id'),'archive exposes first place');
+select is((select second_place->>'entry_id' from public.bracket_archive(4) where week_id='42000000-0000-0000-0000-000000000001'),current_setting('test.third_entry_id'),'archive exposes the final runner-up');
+select is((select jsonb_array_length(third_place) from public.bracket_archive(4) where week_id='42000000-0000-0000-0000-000000000001'),2,'archive exposes both tied semifinalists in third place');
+reset role;
 select results_eq(
   $$select count(*)::bigint from public.weekly_reports where week_id = '42000000-0000-0000-0000-000000000001'$$,
   $$values (1::bigint)$$,

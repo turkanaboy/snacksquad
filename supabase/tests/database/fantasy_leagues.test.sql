@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
-select plan(57);
+select plan(59);
 
 select has_table('public','fantasy_leagues','fantasy leagues are persisted');
 select has_table('public','fantasy_league_members','private league membership is persisted');
@@ -104,5 +104,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','13000000-0000-0000-0000-000000000001',true);
 select is((public.fantasy_feature_state()->>'enabled')::boolean,true,'feature state reports the operational unlock');
+select lives_ok($$select public.reconcile_fantasy('2026-07-15 04:00+00')$$,'ended fantasy seasons reconcile into completed archives');
+select is((public.fantasy_overview((select id from public.fantasy_leagues))->'archive'->0->'season'->>'status'),'complete','participants can read the completed season archive');
 select * from finish();
 rollback;

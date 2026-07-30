@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {
-  castBracketVote, getContestOverview, getProfileBadges, getWeeklyReports,
+  castBracketVote, getBracketArchive, getContestOverview, getProfileBadges, getWeeklyReports,
   mapContestOverview, nominateBracketSnack,
 } from "./contestStore";
 
@@ -67,6 +67,15 @@ const client = {
       week_id: "week-1", report_date: "2026-07-17", published_at: "2026-07-17T13:00:00Z",
       payload: { leaderboard: [{ snack_id: "snack-1", snack_name: "Pretzels", log_count: 5, upvote_count: 8 }] },
     }], error: null };
+    if (name === "bracket_archive") return { data: [{
+      week_id: "week-1", week_start: "2026-07-13",
+      first_place: { entry_id: "entry-1", snack_name: "Pretzels" },
+      second_place: { entry_id: "entry-2", snack_name: "Popcorn" },
+      third_place: [
+        { entry_id: "entry-3", snack_name: "Apple Slices" },
+        { entry_id: "entry-4", snack_name: "Cheese Cubes" },
+      ],
+    }], error: null };
     if (name === "profile_badges") return { data: [{ badge_key: "top-snack", label: "Top Snack", start_date: "2026-07-17", end_date: null }], error: null };
     return { data: null, error: null };
   },
@@ -76,12 +85,23 @@ assert.equal((await getContestOverview(client as never, "week-1"))?.week.id, "we
 await nominateBracketSnack(client as never, "week-1", "snack-1");
 await castBracketVote(client as never, "match-1", "entry-1");
 assert.equal((await getWeeklyReports(client as never, 4))[0].leaderboard[0].upvoteCount, 8);
+assert.deepEqual((await getBracketArchive(client as never, 6))[0], {
+  weekId: "week-1",
+  weekStart: "2026-07-13",
+  firstPlace: { entryId: "entry-1", snackName: "Pretzels" },
+  secondPlace: { entryId: "entry-2", snackName: "Popcorn" },
+  thirdPlace: [
+    { entryId: "entry-3", snackName: "Apple Slices" },
+    { entryId: "entry-4", snackName: "Cheese Cubes" },
+  ],
+});
 assert.equal((await getProfileBadges(client as never, "user-1"))[0].label, "Top Snack");
 assert.deepEqual(rpcCalls, [
   { name: "contest_overview", params: { p_week_id: "week-1" } },
   { name: "nominate_bracket_snack", params: { p_week_id: "week-1", p_snack_id: "snack-1" } },
   { name: "cast_bracket_vote", params: { p_matchup_id: "match-1", p_entry_id: "entry-1" } },
   { name: "weekly_report_feed", params: { p_limit: 4 } },
+  { name: "bracket_archive", params: { p_limit: 6 } },
   { name: "profile_badges", params: { p_user_id: "user-1" } },
 ]);
 

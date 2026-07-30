@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Bracket } from "../components/Bracket";
 import {
-  castBracketVote, getCurrentContestOverview, nominateBracketSnack,
-  type ContestMatchup, type ContestOverview,
+  castBracketVote, getBracketArchive, getCurrentContestOverview, nominateBracketSnack,
+  type BracketArchive, type ContestMatchup, type ContestOverview,
 } from "../contestStore";
 import { friendlyError } from "../errors";
 import { createSupabaseSnackSearch, saveSelectedSnack, type SnackMetadata } from "../snackMetadata";
@@ -16,6 +16,7 @@ function weekLabel(value: string) {
 
 export function ContestsScreen({ client, currentUserId }: Props) {
   const [overview, setOverview] = useState<ContestOverview | null>(null);
+  const [archive, setArchive] = useState<BracketArchive[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyMatchupId, setBusyMatchupId] = useState("");
@@ -27,9 +28,15 @@ export function ContestsScreen({ client, currentUserId }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const nextOverview = await getCurrentContestOverview(client);
-      setOverview(nextOverview);
-      setError("");
+      const [overviewResult, archiveResult] = await Promise.allSettled([getCurrentContestOverview(client), getBracketArchive(client)]);
+      if (overviewResult.status === "rejected") throw overviewResult.reason;
+      setOverview(overviewResult.value);
+      if (archiveResult.status === "fulfilled") {
+        setArchive(archiveResult.value);
+        setError("");
+      } else {
+        setError(`Past bracket winners are unavailable. ${friendlyError(archiveResult.reason)}`);
+      }
     } catch (loadError) {
       setError(friendlyError(loadError));
     } finally {
@@ -128,6 +135,7 @@ export function ContestsScreen({ client, currentUserId }: Props) {
         </section>
       ) : null}
 
+      {archive.length ? <BracketHistory archive={archive} /> : null}
     </div>
   );
 }
@@ -136,4 +144,8 @@ function Champion({ overview }: { overview: ContestOverview }) {
   const champion = overview.entries.find((entry) => entry.id === overview.week.championEntryId);
   if (!champion) return null;
   return <div className="champion-strip"><span>Champion</span><b>{champion.snackName}</b><small>{champion.ownerIds.length ? `${champion.ownerIds.length} badge ${champion.ownerIds.length === 1 ? "recipient" : "recipients"}` : "Leaderboard fill — no owner badge"}</small></div>;
+}
+
+function BracketHistory({ archive }: { archive: BracketArchive[] }) {
+  return <section className="bracket-history" aria-labelledby="bracket-history-title"><div className="section-heading"><div><h2 id="bracket-history-title">Past bracket winners</h2><p>Completed weekly podiums, including shared third place for both semifinalists.</p></div><span>{archive.length}</span></div><div className="bracket-history-list">{archive.map((result) => <details key={result.weekId}><summary><span>Week of {weekLabel(result.weekStart)}</span><b>{result.firstPlace.snackName}</b></summary><ol><li><span>1st</span><b>{result.firstPlace.snackName}</b></li><li><span>2nd</span><b>{result.secondPlace.snackName}</b></li><li><span>3rd (tie)</span><b>{result.thirdPlace.map((entry) => entry.snackName).join(" · ")}</b></li></ol></details>)}</div></section>;
 }

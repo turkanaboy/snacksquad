@@ -288,6 +288,17 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
 .champion-strip span { font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .champion-strip b { font-family: "Arial Narrow", sans-serif; font-size: 1.8rem; text-transform: uppercase; }
 .champion-strip small { font-weight: 750; }
+.bracket-history { padding: 38px 0; }
+.bracket-history > .section-heading { padding: 0 0 18px; border: 0; }
+.bracket-history-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.bracket-history details { border: var(--rule); background: var(--board); }
+.bracket-history summary { display: grid; gap: 5px; min-height: 78px; padding: 14px; cursor: pointer; }
+.bracket-history summary span { color: var(--receipt); font-size: .72rem; text-transform: uppercase; }
+.bracket-history summary b { font-size: 1.05rem; }
+.bracket-history ol { margin: 0; padding: 0; list-style: none; border-top: var(--rule); }
+.bracket-history li { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 11px 14px; border-bottom: var(--rule); }
+.bracket-history li:last-child { border-bottom: 0; }
+.bracket-history li span { color: var(--yellow); font-size: .72rem; font-weight: 800; text-transform: uppercase; }
 
 /* Fantasy */
 .fantasy-screen { width:min(1180px,100%); margin:0 auto; padding:clamp(28px,5vw,70px); }
@@ -327,6 +338,7 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
 .draft-status small { color:var(--receipt); text-transform:uppercase; }
 .draft-status b { margin-top:12px; overflow-wrap:anywhere; }
 .draft-room,.active-fantasy { display:grid; grid-template-columns:1.2fr .8fr; gap:32px; }
+.active-fantasy { margin-top:28px; }
 .draft-board ol,.fantasy-search,.preference-queue ol,.standings ol,.my-roster ul { margin:0; padding:0; list-style:none; border:var(--rule); background:var(--board); }
 .draft-board li,.fantasy-search li,.standings li,.my-roster li { display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:12px; min-height:62px; padding:10px 12px; border-bottom:var(--rule); }
 .draft-board li:last-child,.fantasy-search li:last-child,.standings li:last-child,.my-roster li:last-child { border-bottom:0; }
@@ -342,6 +354,22 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
 .my-roster { display:grid; align-content:start; gap:14px; }
 .my-roster li { grid-template-columns:minmax(0,1fr) auto; }
 .draft-team .open-slot b { color:var(--receipt); }
+.manager-tabs { display:flex; flex-wrap:wrap; gap:6px; }
+.manager-tabs .text-button { padding:7px 9px; border:var(--rule); }
+.manager-tabs .text-button[aria-pressed="true"] { color:var(--counter); background:var(--yellow); }
+.league-rosters h3 { margin:4px 0 0; }
+.season-dates { display:grid; grid-template-columns:repeat(2,1fr); gap:1px; margin:28px 0 0; border:var(--rule); background:var(--shelf); }
+.season-dates div { padding:14px; background:var(--board); }
+.season-dates dt { color:var(--receipt); font-size:.72rem; text-transform:uppercase; }
+.season-dates dd { margin:8px 0 0; font-weight:800; }
+.draft-complete-label { margin:28px 0 -14px; color:var(--yellow); font-size:.75rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.season-archive { margin-top:38px; padding-top:30px; border-top:var(--rule); }
+.season-archive > .section-heading { padding:0 0 18px; border:0; }
+.season-archive details { margin-top:10px; border:var(--rule); background:var(--board); }
+.season-archive summary { display:flex; justify-content:space-between; gap:18px; padding:16px 18px; cursor:pointer; }
+.season-archive summary b { color:var(--yellow); text-transform:uppercase; }
+.season-archive details > .season-dates { margin:0; border-width:1px 0 0; }
+.archive-result { margin:0; padding:22px; border-top:var(--rule); }
 
 @media (hover: hover) and (pointer: fine) {
   .primary-button:hover { background: #fff04b; }
@@ -416,6 +444,7 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
   .bracket-grid { grid-template-columns: repeat(4, 84vw); min-width: 336vw; }
   .round-matchups { min-height: auto; }
   .champion-strip { grid-template-columns: 1fr; gap: 4px; }
+  .bracket-history-list { grid-template-columns: 1fr; }
   .fantasy-screen { padding:28px 14px; }
   .pilot-meter { grid-template-columns:repeat(5,minmax(130px,1fr)); overflow-x:auto; }
   .fantasy-rules summary small { display:none; }
@@ -424,6 +453,8 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
   .fantasy-onboarding,.draft-room,.active-fantasy { grid-template-columns:1fr; }
   .league-switcher,.draft-lobby { align-items:stretch; flex-direction:column; }
   .draft-status { grid-template-columns:1fr 1fr; }
+  .season-dates { grid-template-columns:1fr; }
+  .archive-result { padding:14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

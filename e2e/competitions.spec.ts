@@ -6,6 +6,7 @@ test("Fantasy is reachable from responsive navigation and bracket renders", asyn
   await page.getByRole("button", { name: "Bracket" }).first().click();
   await expect(page.getByRole("heading", { name: "One snack survives." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "The bracket" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Past bracket winners" })).toBeVisible();
   await page.getByRole("button", { name: "Fantasy" }).first().click();
   await expect(page.getByRole("heading", { name: "Draft your snack shelf." })).toBeVisible();
 });
