@@ -5,6 +5,9 @@ import {
   getLeaderboard,
   mapBoardEntry,
   mapLeaderboardItem,
+  mapRandomSnack,
+  mapSnackPreference,
+  mapSnackRelease,
   removeSnackLog,
   setLogUpvote,
 } from "./snackStore";
@@ -45,6 +48,14 @@ assert.deepEqual(mapLeaderboardItem({
   category: "Grains/Bakery",
   logCount: 4,
   upvoteCount: 7,
+});
+
+assert.deepEqual(mapRandomSnack({ id: "snack-1", name: "Pretzels", brand: "Snyder's", category: "Grains/Bakery", image_url: null }), {
+  id: "snack-1", name: "Pretzels", brand: "Snyder's", category: "Grains/Bakery", imageUrl: null,
+});
+assert.equal(mapSnackPreference({ sentiment: -1, snacks: { id: "snack-1", name: "Pretzels", brand: null, category: "Grains/Bakery", image_url: null } }).sentiment, -1);
+assert.deepEqual(mapSnackRelease({ id: "release-1", title: "New pretzels", brand: null, summary: null, article_url: "https://example.com/news", published_at: "2026-08-06" }), {
+  id: "release-1", title: "New pretzels", brand: null, summary: null, articleUrl: "https://example.com/news", publishedAt: "2026-08-06",
 });
 
 const calls: Array<{ name: string; params: unknown }> = [];

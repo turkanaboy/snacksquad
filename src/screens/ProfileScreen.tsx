@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BadgeHistory } from "../components/BadgeHistory";
-import type { LeaderboardItem, MySnackLog } from "../snackStore";
-import { getMySnackLogs, removeSnackLog } from "../snackStore";
+import type { LeaderboardItem, MySnackLog, SnackPreference } from "../snackStore";
+import { getMySnackLogs, getMySnackPreferences, removeSnackLog } from "../snackStore";
 import type { Profile, PublicProfile } from "../profile";
 import { isModerator, listSnackCorrections, reviewSnackCorrection, type SnackCorrection } from "../snackMetadata";
 import { friendlyError } from "../errors";
@@ -40,6 +40,7 @@ export function ProfileScreen({
   client, profile, publicProfile, leaderboard, onBackToMine, onUpdate, onReplaceLog, onChanged,
 }: Props) {
   const [logs, setLogs] = useState<MySnackLog[]>([]);
+  const [preferences, setPreferences] = useState<SnackPreference[]>([]);
   const [corrections, setCorrections] = useState<SnackCorrection[]>([]);
   const [moderator, setModerator] = useState(false);
   const [displayName, setDisplayName] = useState(profile.displayName);
@@ -48,12 +49,14 @@ export function ProfileScreen({
   const [busy, setBusy] = useState(false);
 
   async function refreshPrivate() {
-    const [nextLogs, nextModerator, nextCorrections] = await Promise.all([
+    const [nextLogs, nextPreferences, nextModerator, nextCorrections] = await Promise.all([
       getMySnackLogs(client),
+      getMySnackPreferences(client),
       isModerator(client),
       listSnackCorrections(client),
     ]);
     setLogs(nextLogs);
+    setPreferences(nextPreferences);
     setModerator(nextModerator);
     setCorrections(nextCorrections);
   }
@@ -126,6 +129,8 @@ export function ProfileScreen({
   }
 
   const easternToday = todayInEastern();
+  const likes = preferences.filter((item) => item.sentiment === 1);
+  const dislikes = preferences.filter((item) => item.sentiment === -1);
 
   return (
     <div className="screen-column profile-screen">
@@ -135,6 +140,8 @@ export function ProfileScreen({
         <label>Favorite snack<select value={favoriteSnackId} onChange={(event) => setFavoriteSnackId(event.target.value)}><option value="">Not chosen</option>{favoriteOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
         <button className="primary-button" disabled={busy}>Save profile</button>
       </form>
+
+      <section className="profile-section"><div className="section-heading"><div><h2>Snack preferences</h2><p>Your random picks stay private.</p></div><span>{preferences.length}</span></div><div className="preference-lists"><section><h3>Likes</h3>{likes.length ? <ul className="plain-list">{likes.map((item) => <li key={item.id}><span><b>{item.name}</b><small>{[item.brand, item.category].filter(Boolean).join(" · ")}</small></span><strong aria-label="Liked">↑</strong></li>)}</ul> : <p className="empty-state">No likes yet.</p>}</section><section><h3>Dislikes</h3>{dislikes.length ? <ul className="plain-list">{dislikes.map((item) => <li key={item.id}><span><b>{item.name}</b><small>{[item.brand, item.category].filter(Boolean).join(" · ")}</small></span><strong aria-label="Disliked">↓</strong></li>)}</ul> : <p className="empty-state">No dislikes yet.</p>}</section></div></section>
 
       <section className="profile-section"><div className="section-heading"><div><h2>Private snack log</h2><p>Only you can see these daily entries.</p></div><span>{logs.length}</span></div>{logs.length ? <ul className="private-log">{logs.map((log) => { const open = log.loggedOn === easternToday; return <li key={log.id}><div><b>{log.snackName}</b><small>{log.loggedOn} · {log.category}</small></div>{open ? <div className="button-row"><button className="text-button" onClick={() => onReplaceLog(log)}>Replace</button><button className="text-button danger" disabled={busy} onClick={() => void remove(log)}>Delete</button></div> : <span className="settled-label">Settled</span>}</li>; })}</ul> : <p className="empty-state">Your first log will appear here.</p>}</section>
 

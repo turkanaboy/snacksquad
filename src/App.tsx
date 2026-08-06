@@ -202,6 +202,7 @@ export default function App() {
       {notice ? <div className="global-notice" role="status"><span>{notice}</span><button className="text-button" onClick={() => setNotice("")}>Dismiss</button></div> : null}
       {view === "home" ? (
         <HomeScreen
+          client={client}
           board={board}
           leaderboard={leaderboard}
           currentUserId={activeSession.user.id}
