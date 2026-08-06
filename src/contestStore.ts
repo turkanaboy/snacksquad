@@ -143,7 +143,7 @@ export type BracketArchive = {
   weekId: string;
   weekStart: string;
   firstPlace: BracketPlacement;
-  secondPlace: BracketPlacement;
+  secondPlace: BracketPlacement | null;
   thirdPlace: BracketPlacement[];
 };
 
@@ -155,13 +155,13 @@ export async function getBracketArchive(client: RpcClient, limit = 12): Promise<
     week_id: string;
     week_start: string;
     first_place: { entry_id: string; snack_name: string };
-    second_place: { entry_id: string; snack_name: string };
+    second_place: { entry_id: string; snack_name: string } | null;
     third_place: Array<{ entry_id: string; snack_name: string }>;
   }) => ({
     weekId: row.week_id,
     weekStart: row.week_start,
     firstPlace: placement(row.first_place),
-    secondPlace: placement(row.second_place),
+    secondPlace: row.second_place ? placement(row.second_place) : null,
     thirdPlace: (row.third_place || []).map(placement),
   }));
 }

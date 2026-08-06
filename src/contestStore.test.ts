@@ -75,6 +75,11 @@ const client = {
         { entry_id: "entry-3", snack_name: "Apple Slices" },
         { entry_id: "entry-4", snack_name: "Cheese Cubes" },
       ],
+    }, {
+      week_id: "week-0", week_start: "2026-07-06",
+      first_place: { entry_id: "entry-0", snack_name: "Sea Salt Popcorn" },
+      second_place: null,
+      third_place: [],
     }], error: null };
     if (name === "profile_badges") return { data: [{ badge_key: "top-snack", label: "Top Snack", start_date: "2026-07-17", end_date: null }], error: null };
     return { data: null, error: null };
@@ -85,7 +90,8 @@ assert.equal((await getContestOverview(client as never, "week-1"))?.week.id, "we
 await nominateBracketSnack(client as never, "week-1", "snack-1");
 await castBracketVote(client as never, "match-1", "entry-1");
 assert.equal((await getWeeklyReports(client as never, 4))[0].leaderboard[0].upvoteCount, 8);
-assert.deepEqual((await getBracketArchive(client as never, 6))[0], {
+const archive = await getBracketArchive(client as never, 6);
+assert.deepEqual(archive[0], {
   weekId: "week-1",
   weekStart: "2026-07-13",
   firstPlace: { entryId: "entry-1", snackName: "Pretzels" },
@@ -94,6 +100,13 @@ assert.deepEqual((await getBracketArchive(client as never, 6))[0], {
     { entryId: "entry-3", snackName: "Apple Slices" },
     { entryId: "entry-4", snackName: "Cheese Cubes" },
   ],
+});
+assert.deepEqual(archive[1], {
+  weekId: "week-0",
+  weekStart: "2026-07-06",
+  firstPlace: { entryId: "entry-0", snackName: "Sea Salt Popcorn" },
+  secondPlace: null,
+  thirdPlace: [],
 });
 assert.equal((await getProfileBadges(client as never, "user-1"))[0].label, "Top Snack");
 assert.deepEqual(rpcCalls, [
