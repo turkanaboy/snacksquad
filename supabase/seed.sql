@@ -8,7 +8,7 @@ insert into auth.users (
 )
 select
   '00000000-0000-0000-0000-000000000000', id, 'authenticated', 'authenticated', email,
-  crypt('snacksquad', gen_salt('bf')), now() - interval '35 days',
+  extensions.crypt('snacksquad', extensions.gen_salt('bf')), now() - interval '35 days',
   '', '', '', '', '', '', '', '',
   '{"provider":"email","providers":["email"]}'::jsonb,
   jsonb_build_object('email', email, 'email_verified', true),
@@ -133,7 +133,7 @@ from (values
 cross join generate_series(0, 27) as days(day_offset)
 where (day_offset % 2 = 0 or day_offset = 1)
   and (day_offset <= 6 or u.ordinal <= 6)
-on conflict (id) do update set rating = excluded.rating;
+on conflict (id) do nothing;
 
 insert into public.log_upvotes (log_id, user_id, created_at)
 select l.id, voter.id, l.logged_at + interval '2 hours'
