@@ -112,13 +112,14 @@ on conflict (user_id) do nothing;
 
 -- Roughly one hundred logs over four weeks. The newest week has all eight people;
 -- earlier weeks have six, so the locked Fantasy pilot meter also looks realistic.
-insert into public.snack_logs (id, user_id, snack_id, logged_at, created_at)
+insert into public.snack_logs (id, user_id, snack_id, logged_at, created_at, rating)
 select
   md5(u.id::text || ':' || day_offset::text)::uuid,
   u.id,
   ('20000000-0000-0000-0000-' || lpad((((u.ordinal + day_offset) % 16) + 1)::text, 12, '0'))::uuid,
   ((public.eastern_date() - day_offset) + time '08:00' + u.ordinal * interval '50 minutes') at time zone 'America/New_York',
-  ((public.eastern_date() - day_offset) + time '08:00' + u.ordinal * interval '50 minutes') at time zone 'America/New_York'
+  ((public.eastern_date() - day_offset) + time '08:00' + u.ordinal * interval '50 minutes') at time zone 'America/New_York',
+  1 + ((u.ordinal * 2 + day_offset) % 5)
 from (values
   (1, '10000000-0000-0000-0000-000000000001'::uuid),
   (2, '10000000-0000-0000-0000-000000000002'::uuid),
@@ -132,7 +133,7 @@ from (values
 cross join generate_series(0, 27) as days(day_offset)
 where (day_offset % 2 = 0 or day_offset = 1)
   and (day_offset <= 6 or u.ordinal <= 6)
-on conflict (id) do nothing;
+on conflict (id) do update set rating = excluded.rating;
 
 insert into public.log_upvotes (log_id, user_id, created_at)
 select l.id, voter.id, l.logged_at + interval '2 hours'

@@ -1,15 +1,18 @@
 import assert from "node:assert/strict";
+import { isDeepStrictEqual } from "node:util";
 import {
   createSnackLog,
   getBoard,
   getLeaderboard,
   mapBoardEntry,
   mapLeaderboardItem,
+  mapMySnackLog,
   mapRandomSnack,
   mapSnackPreference,
   mapSnackRelease,
   removeSnackLog,
   setLogUpvote,
+  updateSnackLog,
 } from "./snackStore";
 
 assert.deepEqual(mapBoardEntry({
@@ -21,6 +24,8 @@ assert.deepEqual(mapBoardEntry({
   logger_id: "user-1",
   logger_name: "Alex",
   logged_at: "2026-07-10T14:00:00Z",
+  poster_rating: 5,
+  viewer_rating: 4,
   upvote_count: 3,
   viewer_upvoted: true,
 }), {
@@ -32,6 +37,8 @@ assert.deepEqual(mapBoardEntry({
   loggerId: "user-1",
   loggerName: "Alex",
   loggedAt: "2026-07-10T14:00:00Z",
+  posterRating: 5,
+  viewerRating: 4,
   upvoteCount: 3,
   viewerUpvoted: true,
 });
@@ -48,6 +55,23 @@ assert.deepEqual(mapLeaderboardItem({
   category: "Grains/Bakery",
   logCount: 4,
   upvoteCount: 7,
+});
+
+assert.deepEqual(mapMySnackLog({
+  id: "log-1",
+  snack_id: "snack-1",
+  logged_at: "2026-07-10T14:00:00Z",
+  logged_on: "2026-07-10",
+  rating: 5,
+  snacks: { name: "Pretzels", category: "Grains/Bakery" },
+}), {
+  id: "log-1",
+  snackId: "snack-1",
+  loggedAt: "2026-07-10T14:00:00Z",
+  loggedOn: "2026-07-10",
+  rating: 5,
+  snackName: "Pretzels",
+  category: "Grains/Bakery",
 });
 
 assert.deepEqual(mapRandomSnack({ id: "snack-1", name: "Pretzels", brand: "Snyder's", category: "Grains/Bakery", image_url: null }), {
@@ -89,6 +113,14 @@ function table(actionResult: { data?: unknown; error: null } = { error: null }) 
         },
       };
     },
+    update(payload: unknown) {
+      return {
+        eq(column: string, value: string) {
+          writes.push({ table: "", action: "update", payload: { changes: payload, column, value } });
+          return Promise.resolve(actionResult);
+        },
+      };
+    },
   };
 }
 const writeClient = {
@@ -96,16 +128,30 @@ const writeClient = {
   from(name: string) {
     const query = table();
     const originalInsert = query.insert.bind(query);
+    const originalUpdate = query.update.bind(query);
     query.insert = (payload: unknown) => { writes.push({ table: name, action: "insert", payload }); return originalInsert(payload); };
+    query.update = (payload: unknown) => {
+      const result = originalUpdate(payload);
+      const originalEq = result.eq.bind(result);
+      result.eq = (column: string, value: string) => {
+        writes.push({ table: name, action: "update", payload: { changes: payload, column, value } });
+        return originalEq(column, value);
+      };
+      return result;
+    };
     return query;
   },
 };
 
-await createSnackLog(writeClient as never, "snack-1");
+await createSnackLog(writeClient as never, "snack-1", 5);
+await updateSnackLog(writeClient as never, "log-1", "snack-2", 2);
 await setLogUpvote(writeClient as never, "log-1", true);
 await setLogUpvote(writeClient as never, "log-1", false);
 await removeSnackLog(writeClient as never, "log-1");
-assert(writes.some((write) => write.table === "snack_logs" && write.action === "insert"));
+assert(writes.some((write) => write.table === "snack_logs" && write.action === "insert" &&
+  isDeepStrictEqual(write.payload, { user_id: "user-1", snack_id: "snack-1", rating: 5 })));
+assert(writes.some((write) => write.table === "snack_logs" && write.action === "update" &&
+  isDeepStrictEqual(write.payload, { changes: { snack_id: "snack-2", rating: 2 }, column: "id", value: "log-1" })));
 assert(writes.some((write) => write.table === "log_upvotes" && write.action === "insert"));
 
 console.log("snack store tests passed");

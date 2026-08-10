@@ -15,7 +15,7 @@ import {
 } from "./profile";
 import {
   createManualSnack, createSnackLog, getBoard, getLeaderboard, setLogUpvote,
-  updateSnackLog, type BoardEntry, type LeaderboardItem, type MySnackLog,
+  updateSnackLog, type BoardEntry, type LeaderboardItem, type MySnackLog, type SnackRating,
 } from "./snackStore";
 import { saveSelectedSnack, submitSnackCorrection, type SnackMetadata } from "./snackMetadata";
 import { hasSupabaseConfig, supabase } from "./supabaseClient";
@@ -135,19 +135,19 @@ export default function App() {
     setView("log");
   }
 
-  async function logSnack(snack: SnackMetadata) {
+  async function logSnack(snack: SnackMetadata, rating: SnackRating) {
     const snackId = snack.id || await saveSelectedSnack(client, snack);
-    if (editingLog) await updateSnackLog(client, editingLog.id, snackId);
-    else await createSnackLog(client, snackId);
+    if (editingLog) await updateSnackLog(client, editingLog.id, snackId, rating);
+    else await createSnackLog(client, snackId, rating);
     setEditingLog(null);
     setNotice(editingLog ? "Today’s log was replaced." : `${snack.name} was logged.`);
     await refreshCore();
     setView("home");
   }
 
-  async function logManual(name: string, category: string) {
+  async function logManual(name: string, category: string, rating: SnackRating) {
     const snackId = await createManualSnack(client, name, category);
-    await logSnack({ id: snackId, name, category });
+    await logSnack({ id: snackId, name, category }, rating);
   }
 
   async function toggleUpvote(entry: BoardEntry) {
@@ -220,6 +220,7 @@ export default function App() {
         <LogScreen
           client={client}
           initialQuery={logQuery}
+          initialRating={editingLog?.rating}
           replacing={Boolean(editingLog)}
           onLog={logSnack}
           onManualLog={logManual}

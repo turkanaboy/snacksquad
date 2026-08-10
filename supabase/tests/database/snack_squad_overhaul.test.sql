@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(24);
+select plan(27);
 
 select has_function('public', 'before_user_created_hook', array['jsonb'], 'company-domain auth hook exists');
 select lives_ok(
@@ -19,6 +19,7 @@ select results_eq(
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'snacks', 'canonical snacks table exists');
 select has_table('public', 'snack_logs', 'private snack logs table exists');
+select has_column('public', 'snack_logs', 'rating', 'snack logs store a five-star rating');
 select has_table('public', 'log_upvotes', 'entry upvotes table exists');
 select has_table('public', 'moderators', 'moderator allowlist exists');
 select has_table('public', 'feature_flags', 'feature flags exist');
@@ -40,10 +41,17 @@ select results_eq(
 insert into public.snacks (id, name, normalized_name, category, source_type, created_by)
 values ('20000000-0000-0000-0000-000000000001', 'Doritos', 'doritos', 'Chips/Savory Snacks', 'manual', '10000000-0000-0000-0000-000000000001');
 
-insert into public.snack_logs (id, user_id, snack_id, logged_at)
+insert into public.snack_logs (id, user_id, snack_id, logged_at, rating)
 values
-  ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', now()),
-  ('30000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', now());
+  ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', now(), 5),
+  ('30000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', now(), 4),
+  ('30000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', now() - interval '3 days', 2);
+
+select throws_ok(
+  $$insert into public.snack_logs (user_id, snack_id, logged_at, rating) values ('10000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', now(), 6)$$,
+  '23514', null,
+  'ratings must stay within the five-star scale'
+);
 
 select throws_ok(
   $$insert into public.snack_logs (user_id, snack_id, logged_at) values ('10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', now())$$,
@@ -83,7 +91,7 @@ select results_eq(
 );
 select results_eq(
   'select count(*)::bigint from public.snack_logs',
-  'values (1::bigint)',
+  'values (2::bigint)',
   'authenticated users can read only their detailed log rows'
 );
 select lives_ok(
@@ -94,6 +102,11 @@ select results_eq(
   $$select count(*)::bigint from public.board_feed(20, null)$$,
   $$values (2::bigint)$$,
   'board projection includes separate coworker entries'
+);
+select results_eq(
+  $$select poster_rating, viewer_rating from public.board_feed(20, null) where logger_id = '10000000-0000-0000-0000-000000000002'::uuid$$,
+  $$values (4, 5)$$,
+  'board projection includes the poster rating and the viewer latest rating for the same snack'
 );
 select results_eq(
   $$select count(*)::bigint from public.profile_summary('10000000-0000-0000-0000-000000000002')$$,

@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export const SNACK_RATINGS = [1, 2, 3, 4, 5] as const;
+export type SnackRating = typeof SNACK_RATINGS[number];
+
 export type BoardEntry = {
   id: string;
   snackId: string;
@@ -9,6 +12,8 @@ export type BoardEntry = {
   loggerId: string;
   loggerName: string;
   loggedAt: string;
+  posterRating: SnackRating;
+  viewerRating: SnackRating | null;
   upvoteCount: number;
   viewerUpvoted: boolean;
 };
@@ -26,6 +31,7 @@ export type MySnackLog = {
   snackId: string;
   loggedAt: string;
   loggedOn: string;
+  rating: SnackRating;
   snackName: string;
   category: string;
 };
@@ -61,6 +67,10 @@ export function mapBoardEntry(row: Record<string, unknown>): BoardEntry {
     loggerId: String(row.logger_id),
     loggerName: String(row.logger_name),
     loggedAt: String(row.logged_at),
+    posterRating: Number(row.poster_rating) as SnackRating,
+    viewerRating: row.viewer_rating === null || row.viewer_rating === undefined
+      ? null
+      : Number(row.viewer_rating) as SnackRating,
     upvoteCount: Number(row.upvote_count),
     viewerUpvoted: Boolean(row.viewer_upvoted),
   };
@@ -73,6 +83,19 @@ export function mapLeaderboardItem(row: Record<string, unknown>): LeaderboardIte
     category: String(row.category),
     logCount: Number(row.log_count),
     upvoteCount: Number(row.upvote_count),
+  };
+}
+
+export function mapMySnackLog(row: Record<string, unknown>): MySnackLog {
+  const snack = row.snacks as Record<string, unknown>;
+  return {
+    id: String(row.id),
+    snackId: String(row.snack_id),
+    loggedAt: String(row.logged_at),
+    loggedOn: String(row.logged_on),
+    rating: Number(row.rating) as SnackRating,
+    snackName: String(snack.name),
+    category: String(snack.category),
   };
 }
 
@@ -120,20 +143,10 @@ export async function getLeaderboard(client: RpcClient, days = 30, limit = 10): 
 export async function getMySnackLogs(client: Pick<SupabaseClient, "from">): Promise<MySnackLog[]> {
   const result = await client
     .from("snack_logs")
-    .select("id,snack_id,logged_at,logged_on,snacks(name,category)")
+    .select("id,snack_id,logged_at,logged_on,rating,snacks(name,category)")
     .order("logged_at", { ascending: false });
   if (result.error) throw result.error;
-  return (result.data || []).map((row) => {
-    const snack = row.snacks as unknown as { name: string; category: string };
-    return {
-      id: row.id,
-      snackId: row.snack_id,
-      loggedAt: row.logged_at,
-      loggedOn: row.logged_on,
-      snackName: snack.name,
-      category: snack.category,
-    };
-  });
+  return ((result.data || []) as unknown as Record<string, unknown>[]).map(mapMySnackLog);
 }
 
 export async function getRandomSnack(client: Pick<SupabaseClient, "from">): Promise<RandomSnack | null> {
@@ -177,14 +190,14 @@ async function currentUserId(client: Pick<SupabaseClient, "auth">): Promise<stri
   return result.data.user.id;
 }
 
-export async function createSnackLog(client: DataClient, snackId: string): Promise<void> {
+export async function createSnackLog(client: DataClient, snackId: string, rating: SnackRating): Promise<void> {
   const userId = await currentUserId(client);
-  const result = await client.from("snack_logs").insert({ user_id: userId, snack_id: snackId });
+  const result = await client.from("snack_logs").insert({ user_id: userId, snack_id: snackId, rating });
   if (result.error) throw result.error;
 }
 
-export async function updateSnackLog(client: Pick<SupabaseClient, "from">, logId: string, snackId: string): Promise<void> {
-  const result = await client.from("snack_logs").update({ snack_id: snackId }).eq("id", logId);
+export async function updateSnackLog(client: Pick<SupabaseClient, "from">, logId: string, snackId: string, rating: SnackRating): Promise<void> {
+  const result = await client.from("snack_logs").update({ snack_id: snackId, rating }).eq("id", logId);
   if (result.error) throw result.error;
 }
 

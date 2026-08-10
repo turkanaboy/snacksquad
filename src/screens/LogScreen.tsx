@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseSnackSearch, type SnackMetadata } from "../snackMetadata";
 import { friendlyError } from "../errors";
+import { StarRatingPicker } from "../components/StarRating";
+import type { SnackRating } from "../snackStore";
 
 const categories = [
   "Grains/Bakery", "Protein", "Dairy", "Fruit", "Vegetables", "Candy/Sweets",
@@ -11,13 +13,14 @@ const categories = [
 type Props = {
   client: SupabaseClient;
   initialQuery: string;
+  initialRating?: SnackRating | null;
   replacing?: boolean;
-  onLog: (snack: SnackMetadata) => Promise<void>;
-  onManualLog: (name: string, category: string) => Promise<void>;
+  onLog: (snack: SnackMetadata, rating: SnackRating) => Promise<void>;
+  onManualLog: (name: string, category: string, rating: SnackRating) => Promise<void>;
   onSuggestCorrection: (snackId: string, changes: Record<string, string>, reason: string) => Promise<void>;
 };
 
-export function LogScreen({ client, initialQuery, replacing = false, onLog, onManualLog, onSuggestCorrection }: Props) {
+export function LogScreen({ client, initialQuery, initialRating = null, replacing = false, onLog, onManualLog, onSuggestCorrection }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SnackMetadata[]>([]);
   const [searching, setSearching] = useState(false);
@@ -26,6 +29,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
   const [busyKey, setBusyKey] = useState("");
   const [manualName, setManualName] = useState(initialQuery);
   const [manualCategory, setManualCategory] = useState("Other");
+  const [rating, setRating] = useState<SnackRating | null>(initialRating);
   const [correction, setCorrection] = useState<SnackMetadata | null>(null);
   const [correctionName, setCorrectionName] = useState("");
   const [correctionCategory, setCorrectionCategory] = useState("Other");
@@ -71,10 +75,11 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
   }
 
   async function log(snack: SnackMetadata, key: string) {
+    if (!rating) return;
     setBusyKey(key);
     setMessage("");
     try {
-      await onLog(snack);
+      await onLog(snack, rating);
     } catch (error) {
       setMessage(friendlyError(error));
     } finally {
@@ -84,10 +89,11 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
 
   async function submitManual(event: FormEvent) {
     event.preventDefault();
+    if (!rating) return;
     setBusyKey("manual");
     setMessage("");
     try {
-      await onManualLog(manualName, manualCategory);
+      await onManualLog(manualName, manualCategory, rating);
     } catch (error) {
       setMessage(friendlyError(error));
     } finally {
@@ -127,6 +133,8 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
         <p>{replacing ? "Choose the corrected snack. Existing unsettled reactions will be removed." : "Choose the product once. Snack Squad handles the score and shared board."}</p>
       </header>
 
+      <StarRatingPicker value={rating} onChange={setRating} />
+
       <section className="catalog-search" aria-labelledby="catalog-title">
         <h2 id="catalog-title">Find your snack</h2>
         <form className="search-field" onSubmit={submitSearch}>
@@ -152,7 +160,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
                   {snack.imageUrl ? <img src={snack.imageUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true; }} /> : snack.name.slice(0, 1)}
                 </span>
                 <span><b>{snack.name}</b><small>{[snack.brand, snack.category || "Other"].filter(Boolean).join(" · ")}</small></span>
-                <button className="primary-button compact" onClick={() => log(snack, key)} disabled={Boolean(busyKey)}>
+                <button className="primary-button compact" onClick={() => log(snack, key)} disabled={Boolean(busyKey) || !rating}>
                   {busyKey === key ? "Saving…" : replacing ? "Use this" : "Log it"}
                 </button>
                 {snack.id ? (
@@ -178,7 +186,7 @@ export function LogScreen({ client, initialQuery, replacing = false, onLog, onMa
         <div><h2>Not in the catalog?</h2><p>Manual snacks still count; nutrition awards wait for verification.</p></div>
         <label>Snack name<input value={manualName} onChange={(event) => setManualName(event.target.value)} required /></label>
         <label>Category<select value={manualCategory} onChange={(event) => setManualCategory(event.target.value)}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
-        <button className="secondary-button" disabled={Boolean(busyKey)}>{busyKey === "manual" ? "Adding…" : replacing ? "Add and use" : "Add and log"}</button>
+        <button className="secondary-button" disabled={Boolean(busyKey) || !rating}>{busyKey === "manual" ? "Adding…" : replacing ? "Add and use" : "Add and log"}</button>
       </form>
 
       {correction?.id ? (

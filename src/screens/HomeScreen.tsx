@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { friendlyError } from "../errors";
+import { StarRating } from "../components/StarRating";
 import {
   getRandomSnack, getSnackReleases, setSnackPreference,
   type BoardEntry, type LeaderboardItem, type RandomSnack, type SnackRelease,
@@ -139,6 +140,10 @@ export function HomeScreen({
                   <p><button className="person-link" onClick={() => onOpenProfile(entry.loggerId)}>{entry.loggerName}</button> logged · {timeLabel(entry.loggedAt)}</p>
                   <h2>{entry.snackName}</h2>
                   <span>{entry.category}</span>
+                  <div className="feed-ratings">
+                    <StarRating rating={entry.posterRating} label={`${ownEntry ? "Your" : `${entry.loggerName}’s`} rating`} />
+                    {!ownEntry && entry.viewerRating ? <StarRating rating={entry.viewerRating} label="Your rating" /> : null}
+                  </div>
                 </div>
                 <button
                   className={entry.viewerUpvoted ? "upvote-button voted" : "upvote-button"}

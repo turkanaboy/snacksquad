@@ -11,8 +11,11 @@ test("logs, reacts, protects private rows, replaces, deletes, and moderates", as
   await page.getByRole("button", { name: /Log Snack|Log$/ }).first().click();
   await page.getByLabel("Snack name").fill(snack);
   await page.getByLabel("Category").selectOption("Chips/Savory Snacks");
+  await expect(page.getByRole("button", { name: "Add and log" })).toBeDisabled();
+  await page.getByRole("button", { name: "5 stars" }).click();
   await page.getByRole("button", { name: "Add and log" }).click();
   await expect(page.getByRole("heading", { name: snack })).toBeVisible();
+  await expect(page.getByLabel("Your rating: 5 out of 5 stars")).toBeVisible();
   await expect(page.getByRole("button", { name: `You logged ${snack}` })).toBeDisabled();
 
   const jordan = await signedInPage(browser, users.jordan.email);
@@ -35,8 +38,10 @@ test("logs, reacts, protects private rows, replaces, deletes, and moderates", as
   await expect(page.getByRole("button", { name: `You logged ${snack}` })).toContainText("1");
   await page.getByRole("button", { name: "Profile" }).first().click();
   const privateLog = page.locator(".private-log li").filter({ hasText: snack });
+  await expect(privateLog.getByLabel("Your rating: 5 out of 5 stars")).toBeVisible();
   await privateLog.getByRole("button", { name: "Replace" }).click();
   await page.getByLabel("Snack name").fill(replacement);
+  await page.getByRole("button", { name: "2 stars" }).click();
   await page.getByRole("button", { name: "Add and use" }).click();
   await expect(page.getByRole("heading", { name: replacement })).toBeVisible();
   await expect(page.getByRole("heading", { name: snack })).toHaveCount(0);
@@ -51,6 +56,7 @@ test("logs, reacts, protects private rows, replaces, deletes, and moderates", as
   await page.getByRole("button", { name: "Save profile" }).click();
   await expect(page.getByRole("heading", { name: "Alex Morgan" })).toBeVisible();
   const replacedLog = page.locator(".private-log li").filter({ hasText: replacement });
+  await expect(replacedLog.getByLabel("Your rating: 2 out of 5 stars")).toBeVisible();
   await replacedLog.getByRole("button", { name: "Delete" }).click();
   await expect(page.locator(".status-message")).toContainText("removed");
 
@@ -83,6 +89,29 @@ test("logs, reacts, protects private rows, replaces, deletes, and moderates", as
   await jordan.context.close();
 });
 
+test("feed shows the poster rating and your rating for the same snack", async ({ browser, page }, testInfo) => {
+  const snack = `Shared Rating ${testInfo.project.name}-${Date.now()}`;
+
+  await signIn(page, users.alex.email);
+  await page.getByRole("button", { name: /Log Snack|Log$/ }).first().click();
+  await page.getByLabel("Snack name").fill(snack);
+  await page.getByRole("button", { name: "5 stars" }).click();
+  await page.getByRole("button", { name: "Add and log" }).click();
+
+  const jordan = await signedInPage(browser, users.jordan.email);
+  await jordan.page.getByRole("button", { name: /Log Snack|Log$/ }).first().click();
+  await jordan.page.getByLabel("Brand, product, or barcode").fill(snack);
+  const result = jordan.page.locator(".search-result").filter({ hasText: snack });
+  await expect(result).toBeVisible();
+  await jordan.page.getByRole("button", { name: "4 stars" }).click();
+  await result.getByRole("button", { name: "Log it" }).click();
+
+  const alexEntry = jordan.page.locator(".activity-row").filter({ hasText: snack }).filter({ hasText: "Alex Morgan" });
+  await expect(alexEntry.getByLabel("Alex Morgan’s rating: 5 out of 5 stars")).toBeVisible();
+  await expect(alexEntry.getByLabel("Your rating: 4 out of 5 stars")).toBeVisible();
+  await jordan.context.close();
+});
+
 test("remote-search failure keeps manual logging available and critical screens fit", async ({ page }) => {
   await signIn(page, users.priya.email);
   await page.route("**/functions/v1/snack-metadata", (route) => route.fulfill({
@@ -99,6 +128,8 @@ test("remote-search failure keeps manual logging available and critical screens 
   await page.getByLabel("Brand, product, or barcode").fill("unavailable snack");
   await page.getByRole("button", { name: "Search" }).click();
   await expect(page.getByRole("status")).toContainText("temporarily unavailable");
+  await expect(page.getByRole("button", { name: "Add and log" })).toBeDisabled();
+  await page.getByRole("button", { name: "3 stars" }).click();
   await expect(page.getByRole("button", { name: "Add and log" })).toBeEnabled();
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
   await page.emulateMedia({ reducedMotion: "reduce" });
