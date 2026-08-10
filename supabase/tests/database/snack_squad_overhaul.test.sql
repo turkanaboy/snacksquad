@@ -100,7 +100,7 @@ select lives_ok(
 );
 select results_eq(
   $$select count(*)::bigint from public.board_feed(20, null)$$,
-  $$values (2::bigint)$$,
+  $$values (3::bigint)$$,
   'board projection includes separate coworker entries'
 );
 select results_eq(

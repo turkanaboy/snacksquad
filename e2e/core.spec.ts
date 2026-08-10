@@ -15,7 +15,8 @@ test("logs, reacts, protects private rows, replaces, deletes, and moderates", as
   await page.getByRole("button", { name: "5 stars" }).click();
   await page.getByRole("button", { name: "Add and log" }).click();
   await expect(page.getByRole("heading", { name: snack })).toBeVisible();
-  await expect(page.getByLabel("Your rating: 5 out of 5 stars")).toBeVisible();
+  const loggedEntry = page.locator(".activity-row").filter({ hasText: snack });
+  await expect(loggedEntry.getByLabel("Your rating: 5 out of 5 stars")).toBeVisible();
   await expect(page.getByRole("button", { name: `You logged ${snack}` })).toBeDisabled();
 
   const jordan = await signedInPage(browser, users.jordan.email);
