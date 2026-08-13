@@ -1,11 +1,21 @@
 import { expect, test } from "@playwright/test";
-import { signIn, users } from "./fixtures";
+import { admin, signIn, users } from "./fixtures";
 
 test("random picks save to the private profile and releases stay quiet", async ({ page }) => {
+  const articleUrl = "https://example.com/cocoa-dusted-almond-bites";
+  const update = await admin()
+    .from("snack_releases")
+    .update({ article_url: articleUrl })
+    .eq("id", "30000000-0000-0000-0000-000000000101");
+  if (update.error) throw update.error;
+
   await signIn(page, users.alex.email);
 
   await expect(page.getByRole("heading", { name: "New snack releases" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Cocoa-Dusted Almond Bites" })).toBeVisible();
+  const releaseLink = page.getByRole("link", { name: "Cocoa-Dusted Almond Bites" });
+  await expect(releaseLink).toHaveAttribute("href", articleUrl);
+  await expect(releaseLink).toHaveAttribute("target", "_blank");
+  await expect(releaseLink).toHaveAttribute("rel", "noreferrer");
   await expect(page.locator(".release-feed")).toHaveCSS("animation-name", "none");
 
   await page.getByRole("button", { name: "Choose for me" }).click();

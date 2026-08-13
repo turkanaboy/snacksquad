@@ -180,6 +180,8 @@ input::placeholder, textarea::placeholder { color: #7d858d; }
 .release-feed li:last-child { border-bottom: 0; }
 .release-feed time { color: var(--yellow); font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
 .release-feed h3 { margin: 5px 0 3px; line-height: 1.2; }
+.release-feed h3 a { margin: 0; color: inherit; font-size: inherit; font-weight: inherit; }
+.release-feed h3 a:hover { color: #7ea0ff; }
 .release-feed li > b { color: var(--receipt); font-size: .78rem; }
 .release-feed li > p { margin: 8px 0; color: var(--receipt); font-size: .82rem; line-height: 1.45; }
 .release-feed a { display: inline-block; margin-top: 8px; color: #7ea0ff; font-size: .82rem; font-weight: 750; text-underline-offset: 3px; }
