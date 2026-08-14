@@ -97,13 +97,14 @@ insert into public.snack_preferences (user_id, snack_id, sentiment) values
 on conflict (user_id, snack_id) do update set sentiment = excluded.sentiment;
 
 -- Fictional demo announcements exercise the feed without mixing test content into production.
-insert into public.snack_releases (id, title, brand, summary, published_at) values
-  ('30000000-0000-0000-0000-000000000101', 'Cocoa-Dusted Almond Bites', 'Demo Test Kitchen', 'A bite-size dark chocolate almond snack announced for the fall shelf.', public.eastern_date() - 2),
-  ('30000000-0000-0000-0000-000000000102', 'Everything Hummus Snack Cups', 'Demo Test Kitchen', 'Single-serve hummus cups paired with crisp vegetables.', public.eastern_date() - 6)
+insert into public.snack_releases (id, title, brand, summary, article_url, published_at) values
+  ('30000000-0000-0000-0000-000000000101', 'Cocoa-Dusted Almond Bites', 'Demo Test Kitchen', 'A bite-size dark chocolate almond snack announced for the fall shelf.', 'https://example.com/demo/cocoa-dusted-almond-bites', public.eastern_date() - 2),
+  ('30000000-0000-0000-0000-000000000102', 'Everything Hummus Snack Cups', 'Demo Test Kitchen', 'Single-serve hummus cups paired with crisp vegetables.', 'https://example.com/demo/everything-hummus-snack-cups', public.eastern_date() - 6)
 on conflict (id) do update set
   title = excluded.title,
   brand = excluded.brand,
   summary = excluded.summary,
+  article_url = excluded.article_url,
   published_at = excluded.published_at;
 
 insert into public.moderators (user_id)

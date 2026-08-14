@@ -65,7 +65,7 @@ schema_paths = []
 
 [db.seed]
 # If enabled, seeds the database after migrations during a db reset.
-enabled = true
+enabled = false
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
 sql_paths = ["./seed.sql"]
@@ -383,6 +383,9 @@ inspector_port = 8083
 deno_version = 2
 
 [functions.fantasy-notifications]
+verify_jwt = false
+
+[functions.snack-releases]
 verify_jwt = false
 
 # [edge_runtime.secrets]

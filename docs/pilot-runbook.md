@@ -19,6 +19,7 @@ The smoke check does not replace the mutation steps below; see [`testing.md`](te
 - Set `USDA_API_KEY` and deploy `snack-metadata`.
 - Set `RESEND_API_KEY`, `FANTASY_EMAIL_FROM`, and `SITE_URL`, then deploy `fantasy-notifications --no-verify-jwt`.
 - Set the same random `FANTASY_CRON_SECRET` value in Edge Function secrets and Vault as `snack_squad_fantasy_cron_secret`; add `snack_squad_project_url` to Vault and confirm the `fantasy-notification-sender` Cron job runs each minute.
+- Deploy `snack-releases --no-verify-jwt`, trigger `public.invoke_snack_release_feed()`, and confirm `snack-release-feed-refresh` runs daily with article URLs from `www.snackandbakery.com`.
 - Confirm the production deployment applies the security headers in `vercel.json`: Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and Permissions-Policy.
 - Add at least one moderator in `public.moderators` after their first login.
 - Confirm the `snack-squad-competition-reconciler` Cron job runs every five minutes without errors.

@@ -3,10 +3,12 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(10);
+select plan(12);
 
 select has_table('public', 'snack_preferences', 'private snack preferences are persisted');
 select has_table('public', 'snack_releases', 'new snack releases are persisted');
+select col_not_null('public', 'snack_releases', 'article_url', 'every release links to its source article');
+select col_is_unique('public', 'snack_releases', 'article_url', 'source articles are imported only once');
 select ok(has_table_privilege('authenticated', 'public.snack_preferences', 'select'), 'members can read their preferences');
 select ok(has_table_privilege('authenticated', 'public.snack_preferences', 'insert'), 'members can create preferences');
 select ok(has_table_privilege('authenticated', 'public.snack_releases', 'select'), 'members can read releases');

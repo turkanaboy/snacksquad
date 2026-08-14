@@ -52,6 +52,8 @@ jobs:
       - run: npm exec -- playwright install --with-deps chromium
       - run: npm exec -- supabase start
       - run: npm exec -- supabase db reset
+      - name: Load demo fixtures for isolated browser tests
+        run: docker exec -i supabase_db_SnackSquad psql -U postgres -d postgres < supabase/seed.sql
       - name: Load local Supabase credentials
         run: |
           eval "$(npm exec -- supabase status -o env)"

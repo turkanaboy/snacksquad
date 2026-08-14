@@ -22,7 +22,7 @@ Open Mailpit at `http://127.0.0.1:54324` to follow local magic links.
 
 ### Demo data
 
-After applying the migrations to an empty Supabase project, paste `supabase/seed.sql` into the Supabase SQL Editor and run it. A local database reset runs the same file automatically. It creates eight coworkers, 16 snacks, four weeks of logs and reports, a live bracket, badges, upvotes, and correction history. Request a magic link for `alex.morgan@carnegiehighered.com` (moderator) or another seeded address listed in the file.
+Database resets do not seed data automatically. For an isolated demo or development project only, paste `supabase/seed.sql` into the Supabase SQL Editor and run it manually. It creates eight coworkers, 16 snacks, four weeks of logs and reports, a live bracket, badges, upvotes, and correction history. Request a magic link for `alex.morgan@carnegiehighered.com` (moderator) or another seeded address listed in the file.
 
 The seed inserts fake Auth users and application history. Only run it in a demo or development project whose existing data you do not need to preserve.
 
@@ -50,6 +50,7 @@ npm.cmd exec -- supabase db push
 npm.cmd exec -- supabase secrets set USDA_API_KEY=your-data-gov-key
 npm.cmd exec -- supabase functions deploy snack-metadata
 npm.cmd exec -- supabase functions deploy fantasy-notifications --no-verify-jwt
+npm.cmd exec -- supabase functions deploy snack-releases --no-verify-jwt
 ```
 
 Complete the exact Auth, SMTP, moderator, Cron, and rollout checks in [docs/auth-setup.md](docs/auth-setup.md) and [docs/pilot-runbook.md](docs/pilot-runbook.md).
