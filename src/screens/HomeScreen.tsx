@@ -182,7 +182,7 @@ export function HomeScreen({
           <header><p className="section-label">Just announced</p><h2 id="release-feed-title">New snack releases</h2><p>Newest first, without the ticker.</p></header>
           {releaseError ? <p className="empty-state" role="alert">{releaseError}</p> : null}
           {!releaseError && releases.length === 0 ? <p className="empty-state">New releases will appear here as they’re added.</p> : null}
-          <ul>{releases.map((release) => <li key={release.id}><time dateTime={release.publishedAt}>{dateLabel(release.publishedAt)}</time><ReleaseTitle title={release.title} articleUrl={release.articleUrl} />{release.brand ? <b>{release.brand}</b> : null}{release.summary ? <p>{release.summary}</p> : null}{release.articleUrl ? <a href={release.articleUrl} target="_blank" rel="noreferrer">Read announcement <span aria-hidden="true">↗</span></a> : null}</li>)}</ul>
+          <ul>{releases.map((release) => <li key={release.id}><time dateTime={release.publishedAt}>{dateLabel(release.publishedAt)}</time><ReleaseTitle title={release.title} articleUrl={release.articleUrl} />{release.brand ? <b>{release.brand}</b> : null}{release.summary ? <p>{release.summary}</p> : null}</li>)}</ul>
         </section>
         <section className="leaderboard" aria-labelledby="leaderboard-title">
           <header><div><h2 id="leaderboard-title">Top 10 snacks</h2><p>30 days · ranked by upvotes</p></div></header>

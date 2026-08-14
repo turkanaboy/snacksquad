@@ -116,12 +116,6 @@ export function mapContestOverview(value: unknown): ContestOverview | null {
 
 type RpcClient = Pick<SupabaseClient, "rpc">;
 
-export async function getContestOverview(client: RpcClient, weekId: string): Promise<ContestOverview | null> {
-  const result = await client.rpc("contest_overview", { p_week_id: weekId });
-  if (result.error) throw result.error;
-  return mapContestOverview(result.data);
-}
-
 export async function getCurrentContestOverview(client: RpcClient): Promise<ContestOverview | null> {
   const result = await client.rpc("current_contest_overview");
   if (result.error) throw result.error;
@@ -166,46 +160,7 @@ export async function getBracketArchive(client: RpcClient, limit = 12): Promise<
   }));
 }
 
-export type WeeklyReport = {
-  weekId: string;
-  reportDate: string;
-  publishedAt: string;
-  topSnackId: string | null;
-  nutritionSnackId: string | null;
-  bracketChampionEntryId: string | null;
-  leaderboard: Array<{ snackId: string; snackName: string; logCount: number; upvoteCount: number }>;
-};
-
 export type BadgeTenure = { key: string; label: string; startDate: string; endDate: string | null };
-
-export async function getWeeklyReports(client: RpcClient, limit = 8): Promise<WeeklyReport[]> {
-  const result = await client.rpc("weekly_report_feed", { p_limit: limit });
-  if (result.error) throw result.error;
-  return (result.data || []).map((row: {
-    week_id: string;
-    report_date: string;
-    published_at: string;
-    payload?: {
-      topSnackId?: string | null;
-      nutritionSnackId?: string | null;
-      bracketChampionEntryId?: string | null;
-      leaderboard?: Array<{ snack_id: string; snack_name: string; log_count: number; upvote_count: number }>;
-    };
-  }) => ({
-    weekId: row.week_id,
-    reportDate: row.report_date,
-    publishedAt: row.published_at,
-    topSnackId: row.payload?.topSnackId || null,
-    nutritionSnackId: row.payload?.nutritionSnackId || null,
-    bracketChampionEntryId: row.payload?.bracketChampionEntryId || null,
-    leaderboard: (row.payload?.leaderboard || []).map((item) => ({
-      snackId: item.snack_id,
-      snackName: item.snack_name,
-      logCount: Number(item.log_count),
-      upvoteCount: Number(item.upvote_count),
-    })),
-  }));
-}
 
 export async function getProfileBadges(client: RpcClient, userId: string): Promise<BadgeTenure[]> {
   const result = await client.rpc("profile_badges", { p_user_id: userId });

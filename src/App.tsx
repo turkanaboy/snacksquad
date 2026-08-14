@@ -18,7 +18,7 @@ import {
   updateSnackLog, type BoardEntry, type LeaderboardItem, type MySnackLog, type SnackRating,
 } from "./snackStore";
 import { saveSelectedSnack, submitSnackCorrection, type SnackMetadata } from "./snackMetadata";
-import { hasSupabaseConfig, supabase } from "./supabaseClient";
+import { supabase } from "./supabaseClient";
 import { appViewFromSearch, searchForAppView } from "./appView";
 
 function initialAuthError() {
@@ -114,7 +114,7 @@ export default function App() {
       .catch((error) => setNotice(friendlyError(error)));
   }, [session, refreshCore]);
 
-  if (!hasSupabaseConfig || !supabase) {
+  if (!supabase) {
     return <main className="config-page"><h1>Snack Squad</h1><p role="alert">Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to `.env.local`.</p></main>;
   }
   const client = supabase;
