@@ -27,6 +27,60 @@ const categoryIcons: Record<string, string> = {
   "Candy/Sweets": "✹", "Chips/Savory Snacks": "◒", Beverages: "◉", Other: "•",
 };
 
+export const releaseRefreshIntervalMs = 15 * 60 * 1000;
+
+type ReleaseRefreshLifecycleOptions = {
+  load: () => Promise<SnackRelease[]>;
+  onSuccess: (releases: SnackRelease[]) => void;
+  onError: (error: unknown) => void;
+  getVisibilityState: () => DocumentVisibilityState;
+  setInterval: (callback: () => void, delay: number) => number;
+  clearInterval: (interval: number) => void;
+  addVisibilityListener: (callback: () => void) => void;
+  removeVisibilityListener: (callback: () => void) => void;
+};
+
+export function startReleaseRefreshLifecycle({
+  load,
+  onSuccess,
+  onError,
+  getVisibilityState,
+  setInterval,
+  clearInterval,
+  addVisibilityListener,
+  removeVisibilityListener,
+}: ReleaseRefreshLifecycleOptions) {
+  let active = true;
+  let refreshing = false;
+
+  async function refresh() {
+    if (!active || refreshing) return;
+    refreshing = true;
+    try {
+      const releases = await load();
+      if (active) onSuccess(releases);
+    } catch (error) {
+      if (active) onError(error);
+    } finally {
+      refreshing = false;
+    }
+  }
+
+  function refreshWhenVisible() {
+    if (getVisibilityState() === "visible") void refresh();
+  }
+
+  void refresh();
+  const interval = setInterval(() => void refresh(), releaseRefreshIntervalMs);
+  addVisibilityListener(refreshWhenVisible);
+
+  return () => {
+    active = false;
+    clearInterval(interval);
+    removeVisibilityListener(refreshWhenVisible);
+  };
+}
+
 function ProductImage({ src, name, category }: { src: string | null; name: string; category: string }) {
   const [failed, setFailed] = useState(false);
   return src && !failed
@@ -64,7 +118,19 @@ export function HomeScreen({
   const [releaseError, setReleaseError] = useState("");
 
   useEffect(() => {
-    void getSnackReleases(client).then(setReleases).catch((error) => setReleaseError(friendlyError(error)));
+    return startReleaseRefreshLifecycle({
+      load: () => getSnackReleases(client),
+      onSuccess: (nextReleases) => {
+        setReleases(nextReleases);
+        setReleaseError("");
+      },
+      onError: (error) => setReleaseError(friendlyError(error)),
+      getVisibilityState: () => document.visibilityState,
+      setInterval: (callback, delay) => window.setInterval(callback, delay),
+      clearInterval: (interval) => window.clearInterval(interval),
+      addVisibilityListener: (callback) => document.addEventListener("visibilitychange", callback),
+      removeVisibilityListener: (callback) => document.removeEventListener("visibilitychange", callback),
+    });
   }, [client]);
 
   function submit(event: FormEvent) {

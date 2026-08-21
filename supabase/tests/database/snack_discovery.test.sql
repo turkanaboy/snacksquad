@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(12);
+select plan(13);
 
 select has_table('public', 'snack_preferences', 'private snack preferences are persisted');
 select has_table('public', 'snack_releases', 'new snack releases are persisted');
@@ -13,6 +13,11 @@ select ok(has_table_privilege('authenticated', 'public.snack_preferences', 'sele
 select ok(has_table_privilege('authenticated', 'public.snack_preferences', 'insert'), 'members can create preferences');
 select ok(has_table_privilege('authenticated', 'public.snack_releases', 'select'), 'members can read releases');
 select ok(not has_table_privilege('authenticated', 'public.snack_releases', 'insert'), 'members cannot publish releases');
+select results_eq(
+  $$select schedule, active from cron.job where jobname = 'snack-release-feed-refresh'$$,
+  $$values ('17 */6 * * *'::text, true)$$,
+  'exactly one active snack release refresh runs every six hours'
+);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,

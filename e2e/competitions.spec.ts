@@ -37,6 +37,6 @@ test("four managers can create, join, and start a Fantasy draft", async ({ brows
   const start = page.getByRole("button", { name: "Start season" });
   await expect(start).toBeEnabled();
   await start.click();
-  await expect(page.locator(".draft-status")).toContainText("drafting");
+  await expect(page.locator(".draft-status")).toContainText("Drafting");
   await Promise.all(managers.map((manager) => manager.context.close()));
 });
