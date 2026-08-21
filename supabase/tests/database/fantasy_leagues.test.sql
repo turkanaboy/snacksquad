@@ -107,6 +107,6 @@ select is((public.fantasy_feature_state()->>'enabled')::boolean,true,'feature st
 reset role;
 select lives_ok($$select public.reconcile_fantasy('2026-07-15 04:00+00')$$,'ended fantasy seasons reconcile into completed archives');
 set local role authenticated;
-select is((public.fantasy_overview((select id from public.my_fantasy_leagues() where name='Crunch Club'))->'archive'->0->'season'->>'status'),'complete','participants can read the completed season archive');
+select is((public.fantasy_overview((select league_id from public.my_fantasy_leagues() where name='Crunch Club'))->'archive'->0->'season'->>'status'),'complete','participants can read the completed season archive');
 select * from finish();
 rollback;
