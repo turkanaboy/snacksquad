@@ -228,6 +228,9 @@ select results_eq(
   'rerun does not duplicate the Friday report'
 );
 
+delete from public.badge_tenures
+where badge_definition_id = (select id from public.badge_definitions where key = 'top-snack');
+
 select lives_ok(
   $$select public.sync_badge_holders('top-snack', array['12000000-0000-0000-0000-000000000001'::uuid], date '2026-07-10', '42000000-0000-0000-0000-000000000001')$$,
   'first weekly winner opens a badge tenure'
