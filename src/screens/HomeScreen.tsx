@@ -245,7 +245,7 @@ export function HomeScreen({
 
       <aside className="home-sidebar">
         <section className="release-feed" aria-labelledby="release-feed-title">
-          <header><p className="section-label">Just announced</p><h2 id="release-feed-title">New snack releases</h2><p>Newest first, without the ticker.</p></header>
+          <header><p className="section-label">Just announced</p><h2 id="release-feed-title">The Feed Feed</h2><p>Newest first, without the ticker.</p></header>
           {releaseError ? <p className="empty-state" role="alert">{releaseError}</p> : null}
           {!releaseError && releases.length === 0 ? <p className="empty-state">New releases will appear here as they’re added.</p> : null}
           <ul>{releases.map((release) => <li key={release.id}><time dateTime={release.publishedAt}>{dateLabel(release.publishedAt)}</time><ReleaseTitle title={release.title} articleUrl={release.articleUrl} />{release.brand ? <b>{release.brand}</b> : null}{release.summary ? <p>{release.summary}</p> : null}</li>)}</ul>

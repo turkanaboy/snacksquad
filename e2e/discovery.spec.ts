@@ -11,7 +11,7 @@ test("random picks save to the private profile and releases stay quiet", async (
 
   await signIn(page, users.alex.email);
 
-  await expect(page.getByRole("heading", { name: "New snack releases" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The Feed Feed" })).toBeVisible();
   const releaseLink = page.getByRole("link", { name: "Cocoa-Dusted Almond Bites" });
   await expect(releaseLink).toHaveAttribute("href", articleUrl);
   await expect(releaseLink).toHaveAttribute("target", "_blank");
