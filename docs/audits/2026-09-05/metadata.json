@@ -1,0 +1,21 @@
+{
+  "date": "2026-09-05",
+  "timezone": "America/New_York",
+  "head": "255016a912fdf8518995607f73f62b37b9a32978",
+  "scope": "full current repository plus selected production read-only metadata",
+  "mode": "report-only",
+  "findings": { "total": 14, "P1": 4, "P2": 8, "P3": 2 },
+  "checks": {
+    "typecheck": "passed",
+    "unused_locals_parameters": "passed",
+    "unit_test_commands": "13 passed",
+    "build": "passed",
+    "npm_audit_vulnerabilities": 0,
+    "isolated_browser": "passed; see ui-checks.json",
+    "full_e2e": "not run",
+    "database_tests": "not run",
+    "independent_cross_model": "not run; sequential review"
+  },
+  "production_mutations": false,
+  "application_changes": false
+}

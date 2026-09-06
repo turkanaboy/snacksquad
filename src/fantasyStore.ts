@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SnackMetadata } from "./snackMetadata";
 
 type RpcClient = Pick<SupabaseClient, "rpc">;
 export type FantasyFeatureState = { enabled: boolean; weeksObserved: number; dailyActiveUsers: number; fullBracketParticipation: boolean; weeklyUserGrowth: boolean; averageLogsPerUserWeek: number };
@@ -20,6 +21,7 @@ type RawFantasySeason = { id: string; season_number: number; status: string; cur
 type RawFantasyRosterSlot = { user_id: string; snack_id: string; snack_name: string; category: string };
 type RawFantasyStanding = { user_id: string; points: number };
 export type FantasyOverview = {
+  preferences: SnackMetadata[];
   league: { id: string; name: string; joinCode: string };
   members: FantasyMember[];
   season: FantasySeason | null;
@@ -59,7 +61,7 @@ export async function getFantasyOverview(client: RpcClient, leagueId: string): P
   const season=(x:RawFantasySeason)=>({id:x.id,seasonNumber:Number(x.season_number),status:x.status,currentPick:Number(x.current_pick),pickDeadline:x.pick_deadline,scoringStartsAt:x.scoring_starts_at,scoringEndsAt:x.scoring_ends_at,completedAt:x.completed_at});
   const roster=(rows: RawFantasyRosterSlot[] = [])=>rows.map((x)=>({userId:x.user_id,snackId:x.snack_id,snackName:x.snack_name,category:x.category}));
   const standings=(rows: RawFantasyStanding[] = [])=>rows.map((x)=>({userId:x.user_id,points:Number(x.points)}));
-  return { league:{id:raw.league.id,name:raw.league.name,joinCode:raw.league.join_code}, members:members(raw.members), season:raw.season?season(raw.season):null, draftOrder:(raw.draftOrder||[]).map((x:{user_id:string;position:number})=>({userId:x.user_id,position:Number(x.position)})), picks:(raw.picks||[]).map((x:{user_id:string;snack_id:string;snack_name:string;category:string;pick_number:number;was_auto_pick:boolean})=>({userId:x.user_id,snackId:x.snack_id,snackName:x.snack_name,category:x.category,pickNumber:Number(x.pick_number),wasAutoPick:x.was_auto_pick})), roster:roster(raw.roster), standings:standings(raw.standings), archive:(raw.archive||[]).map((x:{season:RawFantasySeason;members:RawFantasyMember[];roster:RawFantasyRosterSlot[];standings:RawFantasyStanding[]})=>({season:season(x.season),members:members(x.members),roster:roster(x.roster),standings:standings(x.standings)})) };
+  return { preferences: raw.preferences || [], league:{id:raw.league.id,name:raw.league.name,joinCode:raw.league.join_code}, members:members(raw.members), season:raw.season?season(raw.season):null, draftOrder:(raw.draftOrder||[]).map((x:{user_id:string;position:number})=>({userId:x.user_id,position:Number(x.position)})), picks:(raw.picks||[]).map((x:{user_id:string;snack_id:string;snack_name:string;category:string;pick_number:number;was_auto_pick:boolean})=>({userId:x.user_id,snackId:x.snack_id,snackName:x.snack_name,category:x.category,pickNumber:Number(x.pick_number),wasAutoPick:x.was_auto_pick})), roster:roster(raw.roster), standings:standings(raw.standings), archive:(raw.archive||[]).map((x:{season:RawFantasySeason;members:RawFantasyMember[];roster:RawFantasyRosterSlot[];standings:RawFantasyStanding[]})=>({season:season(x.season),members:members(x.members),roster:roster(x.roster),standings:standings(x.standings)})) };
 }
 async function rpcVoid(client:RpcClient,name:string,params:Record<string,unknown>){const result=await client.rpc(name,params);if(result.error)throw result.error;return result.data;}
 export const createFantasyLeague=(client:RpcClient,name:string)=>rpcVoid(client,"create_fantasy_league",{p_name:name}) as Promise<Array<{league_id:string;join_code:string}>>;

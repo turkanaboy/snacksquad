@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useVisibleRefresh } from "../useVisibleRefresh";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createFantasyLeague,
@@ -35,26 +36,65 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SnackMetadata[]>([]);
   const [preferences, setPreferences] = useState<SnackMetadata[]>([]);
+  const queueDirty = useRef(false);
+  const queueSeason = useRef<string | null>(null);
+  const [queueMessage, setQueueMessage] = useState("");
+  const requestVersion = useRef(0);
+  const selectedRef = useRef(selectedId);
+  selectedRef.current = selectedId;
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
+  const loadingRef = useRef(false);
+  const [showLeagueForms, setShowLeagueForms] = useState(false);
 
   const load = useCallback(async () => {
     if (!feature.enabled) return;
+    const version = ++requestVersion.current;
+    loadingRef.current = true;
     try {
       const next = await getMyFantasyLeagues(client);
-      setLeagues(next);
       const id = next.some((league) => league.id === selectedId) ? selectedId : next[0]?.id || "";
-      setSelectedId(id);
-      setOverview(id ? await getFantasyOverview(client, id) : null);
+      const nextOverview = id ? await getFantasyOverview(client, id) : null;
+      if (version !== requestVersion.current) return;
+      setLeagues(next);
+      if (id !== selectedId) setSelectedId(id);
+      setOverview(nextOverview);
+      if (queueSeason.current !== nextOverview?.season?.id || !queueDirty.current) {
+        setPreferences(nextOverview?.preferences || []);
+        queueDirty.current = false;
+        queueSeason.current = nextOverview?.season?.id || null;
+      }
       setLoadFailed(false);
       setError("");
     } catch (loadError) {
+      if (version !== requestVersion.current) return;
       setLoadFailed(true);
       setError(friendlyError(loadError));
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) { setLoading(false); loadingRef.current = false; }
     }
   }, [client, feature.enabled, selectedId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    return () => { requestVersion.current++; loadingRef.current = false; };
+  }, [load]);
+  useVisibleRefresh(async () => {
+    if (!busyRef.current && !loadingRef.current) await load();
+  }, feature.enabled, 15_000);
+
+  function selectLeague(id: string) {
+    requestVersion.current++;
+    selectedRef.current = id;
+    setSelectedId(id);
+    setOverview(null);
+    setPreferences([]);
+    queueDirty.current = false;
+    queueSeason.current = null;
+    setQueueMessage("");
+    setQuery("");
+    setResults([]);
+  }
 
   const search = useMemo(() => createSupabaseSnackSearch(
     client,
@@ -75,25 +115,29 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
   if (loading) return <div className="fantasy-screen"><p className="empty-state" role="status">Opening your fantasy leagues…</p></div>;
 
   const selectedLeague = leagues.find((league) => league.id === selectedId);
-  const season = overview?.season;
+  const currentOverview = overview?.league.id === selectedId ? overview : null;
+  const season = currentOverview?.season;
   const managers = overview?.draftOrder.length || 0;
   const round = season && managers ? Math.floor((season.currentPick - 1) / managers) + 1 : 0;
   const within = season && managers ? (season.currentPick - 1) % managers + 1 : 0;
   const pickerPosition = round % 2 === 1 ? within : managers - within + 1;
   const pickerId = overview?.draftOrder.find((manager) => manager.position === pickerPosition)?.userId;
-  const myTurn = season?.status === "drafting" && pickerId === currentUserId;
+  const myTurn = Boolean(currentOverview) && season?.status === "drafting" && pickerId === currentUserId;
   const teamSlots = fantasyTeamSlots(overview?.roster || [], currentUserId);
 
-  async function act(work: () => Promise<unknown>) {
+  async function act(work: () => Promise<unknown>, reload = true) {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     try {
       await work();
       setQuery("");
-      await load();
+      if (reload) await load();
     } catch (actionError) {
       setError(friendlyError(actionError));
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -102,17 +146,19 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
     event.preventDefault();
     await act(async () => {
       const rows = await createFantasyLeague(client, leagueName);
-      setSelectedId(rows[0].league_id);
+      selectLeague(rows[0].league_id);
+      setShowLeagueForms(false);
       setLeagueName("");
-    });
+    }, false);
   }
 
   async function join(event: FormEvent) {
     event.preventDefault();
     await act(async () => {
-      setSelectedId(await joinFantasyLeague(client, joinCode));
+      selectLeague(await joinFantasyLeague(client, joinCode));
+      setShowLeagueForms(false);
       setJoinCode("");
-    });
+    }, false);
   }
 
   async function submitSearch(event: FormEvent) {
@@ -127,12 +173,20 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
   }
 
   async function choose(snack: SnackMetadata, mode: "pick" | "preference") {
+    if (!currentOverview || busyRef.current) return;
+    const leagueId = selectedId;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     try {
       const id = snack.id || await saveSelectedSnack(client, snack);
+      if (selectedRef.current !== leagueId) return;
       if (mode === "preference") {
-        if (!preferences.some((item) => item.id === id)) setPreferences([...preferences, { ...snack, id }]);
+        if (!preferences.some((item) => item.id === id)) {
+          setPreferences([...preferences, { ...snack, id }]);
+          queueDirty.current = true;
+          setQueueMessage("Unsaved queue changes");
+        }
         return;
       }
       if (!season) return;
@@ -142,6 +196,7 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
     } catch (actionError) {
       setError(friendlyError(actionError));
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -155,23 +210,28 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
       </header>
       <FantasyRules />
       {error ? <div className="error-message" role="alert">{error}</div> : null}
+      <div className="button-row">
+        <button className="text-button" disabled={busy} onClick={() => void load()}>Refresh leagues</button>
+        {leagues.length ? <button className="secondary-button" disabled={busy} onClick={() => setShowLeagueForms(!showLeagueForms)}>{showLeagueForms ? "Close league forms" : "Create or join a league"}</button> : null}
+      </div>
+      {(!leagues.length && !loadFailed || showLeagueForms) ? (
+        <section className="fantasy-onboarding">
+          <form onSubmit={create}><h2>Create a league</h2><label>League name<input value={leagueName} onChange={(event) => setLeagueName(event.target.value)} required maxLength={80} /></label><button className="primary-button" disabled={busy}>Create league</button></form>
+          <form onSubmit={join}><h2>Join with a code</h2><label>Join code<input value={joinCode} onChange={(event) => setJoinCode(event.target.value)} required /></label><button className="secondary-button" disabled={busy}>Join league</button></form>
+        </section>
+      ) : null}
 
       {loadFailed && !leagues.length ? (
         <section className="fantasy-onboarding">
           <div><h2>Fantasy leagues did not load</h2><p>Check your connection, then try again.</p><button className="secondary-button" onClick={() => { setLoading(true); void load(); }}>Retry</button></div>
         </section>
-      ) : !leagues.length ? (
-        <section className="fantasy-onboarding">
-          <form onSubmit={create}><h2>Create a league</h2><label>League name<input value={leagueName} onChange={(event) => setLeagueName(event.target.value)} required /></label><button className="primary-button" disabled={busy}>Create league</button></form>
-          <form onSubmit={join}><h2>Join with a code</h2><label>Join code<input value={joinCode} onChange={(event) => setJoinCode(event.target.value)} required /></label><button className="secondary-button" disabled={busy}>Join league</button></form>
-        </section>
-      ) : (
+      ) : !leagues.length ? null : (
         <>
           <div className="league-switcher">
-            <label>League<select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>{leagues.map((league) => <option value={league.id} key={league.id}>{league.name}</option>)}</select></label>
+            <label>League<select value={selectedId} disabled={busy} onChange={(event) => selectLeague(event.target.value)}>{leagues.map((league) => <option value={league.id} key={league.id}>{league.name}</option>)}</select></label>
             {selectedLeague ? <span><b>{selectedLeague.memberCount}/8 managers</b><small>Code {selectedLeague.joinCode}</small></span> : null}
           </div>
-          {!season ? (
+          {!currentOverview ? <p role="status">{loadFailed ? "This league could not load. Use Refresh leagues to retry." : "Loading selected league…"}</p> : !season ? (
             <section className="draft-lobby">
               <div><h2>Draft lobby</h2><p>Four managers are required. Missing auto-picks are filled from the private reserve.</p></div>
               {selectedLeague?.isCreator ? <button className="primary-button" disabled={busy || selectedLeague.memberCount < 4} onClick={() => void act(() => startFantasyDraft(client, selectedId))}>Start season</button> : null}
@@ -184,7 +244,7 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
                   <section className="draft-room">
                     <div className="draft-board"><h2>Pick history</h2>{overview?.picks.length ? <ol>{overview.picks.map((pick) => <li key={pick.pickNumber}><span>{pick.pickNumber}</span><b>{pick.snackName}</b><small>{overview.members.find((member) => member.userId === pick.userId)?.displayName || "Unknown manager"} · {pick.category}{pick.wasAutoPick ? " · auto-pick" : ""}</small></li>)}</ol> : <p className="empty-state">The first manager is on the clock.</p>}</div>
                     <div className="draft-actions">
-                      <RosterViewer members={overview.members} roster={overview.roster} currentUserId={currentUserId} />
+                      <RosterViewer members={currentOverview.members} roster={currentOverview.roster} currentUserId={currentUserId} />
                       <h2>{myTurn ? "You’re on the clock" : "Build your auto-pick queue"}</h2>
                       <SearchForm query={query} setQuery={setQuery} busy={busy} submitSearch={submitSearch} />
                       {results.length ? <ul className="fantasy-search">{results.map((snack, index) => {
@@ -193,12 +253,20 @@ export function FantasyScreen({ client, currentUserId, feature, initialLeagueId 
                         const action = !category ? "Not eligible" : !slotOpen ? "Slot filled" : myTurn ? "Draft" : "Add to queue";
                         return <li key={snack.id || snack.providerId || snack.barcode || `${snack.name}-${index}`}><span><b>{snack.name}</b><small>{category || snack.category}</small></span><button type="button" className="text-button" disabled={busy || !slotOpen} onClick={() => void choose(snack, myTurn ? "pick" : "preference")}>{action}</button></li>;
                       })}</ul> : null}
-                      {preferences.length ? <div className="preference-queue"><h3>Auto-pick order</h3><ol>{preferences.map((snack) => <li key={snack.id}>{snack.name}<button type="button" className="text-button" onClick={() => setPreferences((current) => current.filter((item) => item.id !== snack.id))}>Remove</button></li>)}</ol><button className="secondary-button" disabled={busy} onClick={() => void act(() => setFantasyPreferences(client, season.id, preferences.map((snack) => snack.id!)))}>Save queue</button></div> : null}
+                      <div className="preference-queue"><h3>Auto-pick order</h3>
+                        {preferences.length ? <ol>{preferences.map((snack) => <li key={snack.id}>{snack.name}<button type="button" className="text-button" disabled={busy} onClick={() => { setPreferences((current) => current.filter((item) => item.id !== snack.id)); queueDirty.current = true; setQueueMessage("Unsaved queue changes"); }}>Remove</button></li>)}</ol> : <p>No snacks queued. Automatic picks will use the catalog.</p>}
+                        <button className="secondary-button" disabled={busy} onClick={() => void act(async () => {
+                          await setFantasyPreferences(client, season.id, preferences.map((snack) => snack.id!));
+                          queueDirty.current = false;
+                          setQueueMessage("Queue saved.");
+                        })}>Save queue</button>
+                        <p role="status">{queueMessage}</p>
+                      </div>
                     </div>
                   </section>
                 </>
               ) : season.status === "active" ? <SeasonSummary overview={overview!} currentUserId={currentUserId} /> : null}
-              {overview.archive.length ? <SeasonArchive archive={overview.archive} currentUserId={currentUserId} canRestart={season.status === "complete" && Boolean(selectedLeague?.isCreator)} busy={busy} onRestart={() => void act(() => startFantasyDraft(client, selectedId))} /> : null}
+              {currentOverview.archive.length ? <SeasonArchive archive={currentOverview.archive} currentUserId={currentUserId} canRestart={season.status === "complete" && Boolean(selectedLeague?.isCreator)} busy={busy} onRestart={() => void act(() => startFantasyDraft(client, selectedId))} /> : null}
             </>
           )}
         </>

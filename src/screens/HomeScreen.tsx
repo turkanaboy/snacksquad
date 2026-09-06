@@ -13,6 +13,8 @@ type Props = {
   leaderboard: LeaderboardItem[];
   currentUserId: string;
   loading: boolean;
+  votingIds?: string[];
+  onRefresh?: () => void;
   hasMore: boolean;
   loadingMore: boolean;
   onSearch: (query: string) => void;
@@ -89,7 +91,7 @@ function ProductImage({ src, name, category }: { src: string | null; name: strin
 }
 
 function timeLabel(value: string) {
-  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(value));
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
 function dateLabel(value: string) {
@@ -107,7 +109,7 @@ export function ReleaseTitle({ title, articleUrl }: Pick<SnackRelease, "title" |
 }
 
 export function HomeScreen({
-  client, board, leaderboard, currentUserId, loading, hasMore, loadingMore, onSearch, onUpvote, onOpenProfile, onOpenContests, onLoadMore,
+  client, board, leaderboard, currentUserId, loading, hasMore, loadingMore, onSearch, onUpvote, onOpenProfile, onOpenContests, onLoadMore, votingIds = [], onRefresh,
 }: Props) {
   const [query, setQuery] = useState("");
   const [randomSnack, setRandomSnack] = useState<RandomSnack | null>(null);
@@ -199,7 +201,7 @@ export function HomeScreen({
 
         <header className="section-heading">
           <div><h1 id="activity-title">Recent activity</h1><p>Separate check-ins, shared momentum.</p></div>
-          <span>{board.length} {board.length === 1 ? "log" : "logs"}</span>
+          <div className="button-row"><span>{board.length} {board.length === 1 ? "log" : "logs"}</span><button className="text-button" disabled={loading} onClick={onRefresh}>Refresh activity</button></div>
         </header>
 
         <section className="activity-board" aria-live="polite" aria-busy={loading}>
@@ -213,18 +215,18 @@ export function HomeScreen({
               <article className={`activity-row${entry.imageUrl ? "" : " no-image"}`} key={entry.id}>
                 <div className="activity-product"><ProductImage src={entry.imageUrl} name={entry.snackName} category={entry.category} /></div>
                 <div className="activity-copy">
-                  <p><button className="person-link" onClick={() => onOpenProfile(entry.loggerId)}>{entry.loggerName}</button> logged · {timeLabel(entry.loggedAt)}</p>
+                  <p><button className="person-link" onClick={() => onOpenProfile(entry.loggerId)}>{entry.loggerName}</button> logged · <time dateTime={entry.loggedAt}>{timeLabel(entry.loggedAt)}</time></p>
                   <h2>{entry.snackName}</h2>
                   <span>{entry.category}</span>
                   <div className="feed-ratings">
-                    <StarRating rating={entry.posterRating} label={`${ownEntry ? "Your" : `${entry.loggerName}’s`} rating`} />
-                    {!ownEntry && entry.viewerRating ? <StarRating rating={entry.viewerRating} label="Your rating" /> : null}
+                    <StarRating rating={entry.posterRating} source={entry.posterRatingSource} label={`${ownEntry ? "Your" : `${entry.loggerName}’s`} rating`} />
+                    {!ownEntry && entry.viewerRating ? <StarRating rating={entry.viewerRating} source={entry.viewerRatingSource} label="Your rating" /> : null}
                   </div>
                 </div>
                 <button
                   className={entry.viewerUpvoted ? "upvote-button voted" : "upvote-button"}
                   onClick={() => onUpvote(entry)}
-                  disabled={ownEntry}
+                  disabled={ownEntry || votingIds.includes(entry.id)}
                   aria-label={ownEntry ? `You logged ${entry.snackName}` : `${entry.viewerUpvoted ? "Remove upvote from" : "Upvote"} ${entry.snackName}`}
                   aria-pressed={entry.viewerUpvoted}
                   title={ownEntry ? "You cannot upvote your own log" : undefined}

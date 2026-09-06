@@ -1,4 +1,5 @@
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
+import { getProfileBadges } from "./contestStore";
 
 const fallbackName = "Snack Fan";
 const companyEmailPattern = /^[^@\s]+@carnegiehighered\.com$/i;
@@ -26,11 +27,6 @@ export function normalizeDisplayName(value: string): string {
 
 export function isCompanyEmail(value: string): boolean {
   return companyEmailPattern.test(value.trim());
-}
-
-export function deriveDisplayName(email?: string | null): string {
-  if (!email) return fallbackName;
-  return normalizeDisplayName(email.split("@", 1)[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()));
 }
 
 export async function requestMagicLink(
@@ -98,12 +94,11 @@ export async function updateMyProfile(
 }
 
 export async function loadPublicProfile(client: Pick<SupabaseClient, "rpc">, userId: string): Promise<PublicProfile> {
-  const [summaryResult, badgeResult] = await Promise.all([
+  const [summaryResult, badges] = await Promise.all([
     client.rpc("profile_summary", { p_user_id: userId }),
-    client.rpc("profile_badges", { p_user_id: userId }),
+    getProfileBadges(client, userId),
   ]);
   if (summaryResult.error) throw summaryResult.error;
-  if (badgeResult.error) throw badgeResult.error;
   const summary = summaryResult.data?.[0];
   if (!summary) throw new Error("Profile not found.");
   return {
@@ -114,16 +109,6 @@ export async function loadPublicProfile(client: Pick<SupabaseClient, "rpc">, use
     totalLogs: Number(summary.total_logs),
     distinctSnacks: Number(summary.distinct_snacks),
     categoryMix: summary.category_mix || {},
-    badges: (badgeResult.data || []).map((badge: {
-      badge_key: string;
-      label: string;
-      start_date: string;
-      end_date: string | null;
-    }) => ({
-      key: badge.badge_key,
-      label: badge.label,
-      startDate: badge.start_date,
-      endDate: badge.end_date,
-    })),
+    badges,
   };
 }

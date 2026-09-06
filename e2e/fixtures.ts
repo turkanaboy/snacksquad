@@ -24,7 +24,8 @@ export const admin = () => createClient(supabaseUrl(), required("SUPABASE_SERVIC
 const clients = new Map<string, Promise<SupabaseClient>>();
 
 export async function signIn(page: Page, email: string, destination = "/") {
-  const client = await userClient(email);
+  // Browser sign-out revokes its session; do not reuse Node-side cached sessions.
+  const client = await authenticate(email);
   const result = await client.auth.getSession();
   if (result.error || !result.data.session) throw result.error || new Error("Local test session was not created.");
   await page.addInitScript((session) => localStorage.setItem("sb-127-auth-token", JSON.stringify(session)), result.data.session);

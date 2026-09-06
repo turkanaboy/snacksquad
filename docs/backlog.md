@@ -15,7 +15,7 @@
 
 - [ ] Post a Slack message when a new snack is suggested after Slack app credentials exist.
 - [ ] Add a Slack slash command or shortcut for submitting a snack after Slack app credentials exist.
-- [ ] Consider Slack sign-in only if anonymous sessions become confusing across devices.
+- [ ] Consider Slack sign-in if company email magic links need an alternative.
 
 ## Snack Metadata
 
@@ -35,6 +35,15 @@
 
 ## Admin
 
-- [ ] Add a lightweight moderator cleanup path only after choosing a real admin identity model.
+- [x] Add moderator snack cleanup through the authorized merge RPC.
 - [x] Add an archive view for old snacks.
-- [x] Add export to CSV if the snack board becomes useful history.
+- [ ] Add export to CSV if the snack board becomes useful history; there is currently no export UI.
+
+## Current follow-ups
+
+- [ ] Surface Friday reports in the application; database reporting exists, but no screen presents it.
+- [ ] Add browser Back/Forward navigation and intentional focus placement between screens.
+- [ ] Add profile history pagination if longer histories make the page difficult to use.
+- [ ] Consider logging directly from favorite/random snack cards and undo for deleted logs.
+
+Earlier completed entries describe historical milestones, not a guarantee that every original UI survived subsequent redesigns. See `docs/audits/2026-09-05/` for the current audit and remediation evidence.

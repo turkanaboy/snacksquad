@@ -38,6 +38,8 @@ assert.deepEqual(mapBoardEntry({
   loggerName: "Alex",
   loggedAt: "2026-07-10T14:00:00Z",
   posterRating: 5,
+  posterRatingSource: "legacy_unknown",
+  viewerRatingSource: "legacy_unknown",
   viewerRating: 4,
   upvoteCount: 3,
   viewerUpvoted: true,
@@ -70,6 +72,7 @@ assert.deepEqual(mapMySnackLog({
   loggedAt: "2026-07-10T14:00:00Z",
   loggedOn: "2026-07-10",
   rating: 5,
+  ratingSource: "legacy_unknown",
   snackName: "Pretzels",
   category: "Grains/Bakery",
 });
@@ -77,7 +80,8 @@ assert.deepEqual(mapMySnackLog({
 assert.deepEqual(mapRandomSnack({ id: "snack-1", name: "Pretzels", brand: "Snyder's", category: "Grains/Bakery", image_url: null }), {
   id: "snack-1", name: "Pretzels", brand: "Snyder's", category: "Grains/Bakery", imageUrl: null,
 });
-assert.equal(mapSnackPreference({ sentiment: -1, snacks: { id: "snack-1", name: "Pretzels", brand: null, category: "Grains/Bakery", image_url: null } }).sentiment, -1);
+assert.equal(mapSnackPreference({ sentiment: -1, snacks: { id: "snack-1", name: "Pretzels", brand: null, category: "Grains/Bakery", image_url: null } })?.sentiment, -1);
+assert.equal(mapSnackPreference({ sentiment: 1, snacks: null }), null);
 assert.deepEqual(mapSnackRelease({ id: "release-1", title: "New pretzels", brand: null, summary: null, article_url: "https://example.com/news", published_at: "2026-08-06" }), {
   id: "release-1", title: "New pretzels", brand: null, summary: null, articleUrl: "https://example.com/news", publishedAt: "2026-08-06",
 });
@@ -86,7 +90,7 @@ const calls: Array<{ name: string; params: unknown }> = [];
 const rpcClient = {
   rpc: async (name: string, params: unknown) => {
     calls.push({ name, params });
-    if (name === "board_feed") return { data: [], error: null };
+    if (name === "board_feed_page") return { data: [], error: null };
     if (name === "snack_leaderboard") return { data: [], error: null };
     return { data: null, error: null };
   },
@@ -94,9 +98,11 @@ const rpcClient = {
 assert.deepEqual(await getBoard(rpcClient as never), []);
 assert.deepEqual(await getLeaderboard(rpcClient as never), []);
 assert.deepEqual(calls, [
-  { name: "board_feed", params: { p_limit: 30, p_before: null } },
+  { name: "board_feed_page", params: { p_limit: 30, p_before: null, p_before_id: null } },
   { name: "snack_leaderboard", params: { p_days: 30, p_limit: 10 } },
 ]);
+await getBoard(rpcClient as never, 30, { loggedAt: "2026-09-05T12:00:00Z", id: "last-log" });
+assert.deepEqual(calls.at(-1), { name: "board_feed_page", params: { p_limit: 30, p_before: "2026-09-05T12:00:00Z", p_before_id: "last-log" } });
 
 const writes: Array<{ table: string; action: string; payload: unknown }> = [];
 function table(actionResult: { data?: unknown; error: null } = { error: null }) {
@@ -149,9 +155,9 @@ await setLogUpvote(writeClient as never, "log-1", true);
 await setLogUpvote(writeClient as never, "log-1", false);
 await removeSnackLog(writeClient as never, "log-1");
 assert(writes.some((write) => write.table === "snack_logs" && write.action === "insert" &&
-  isDeepStrictEqual(write.payload, { user_id: "user-1", snack_id: "snack-1", rating: 5 })));
+  isDeepStrictEqual(write.payload, { user_id: "user-1", snack_id: "snack-1", rating: 5, rating_source: "user" })));
 assert(writes.some((write) => write.table === "snack_logs" && write.action === "update" &&
-  isDeepStrictEqual(write.payload, { changes: { snack_id: "snack-2", rating: 2 }, column: "id", value: "log-1" })));
+  isDeepStrictEqual(write.payload, { changes: { snack_id: "snack-2", rating: 2, rating_source: "user" }, column: "id", value: "log-1" })));
 assert(writes.some((write) => write.table === "log_upvotes" && write.action === "insert"));
 
 console.log("snack store tests passed");

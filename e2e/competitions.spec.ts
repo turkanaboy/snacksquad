@@ -16,6 +16,8 @@ test("four managers can create, join, and start a Fantasy draft", async ({ brows
   const leagueName = `E2E League ${Date.now()}`;
   await signIn(page, users.alex.email);
   await page.getByRole("button", { name: "Fantasy" }).click();
+  await expect(page.getByRole("heading", { name: "Draft your snack shelf." })).toBeVisible();
+  if (await page.getByRole("button", { name: "Create or join a league" }).count()) await page.getByRole("button", { name: "Create or join a league" }).click();
   await page.getByLabel("League name").fill(leagueName);
   await page.getByRole("button", { name: "Create league" }).click();
   const switcher = page.locator(".league-switcher");
@@ -28,15 +30,21 @@ test("four managers can create, join, and start a Fantasy draft", async ({ brows
   }
   for (const manager of managers) {
     await manager.page.getByRole("button", { name: "Fantasy" }).click();
+    await expect(manager.page.getByRole("heading", { name: "Draft your snack shelf." })).toBeVisible();
+    if (await manager.page.getByRole("button", { name: "Create or join a league" }).count()) await manager.page.getByRole("button", { name: "Create or join a league" }).click();
     await manager.page.getByLabel("Join code").fill(code);
     await manager.page.getByRole("button", { name: "Join league" }).click();
     await expect(manager.page.locator(".league-switcher")).toContainText(leagueName);
   }
 
-  await page.reload();
+  await page.bringToFront();
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   const start = page.getByRole("button", { name: "Start season" });
   await expect(start).toBeEnabled();
   await start.click();
   await expect(page.locator(".draft-status")).toContainText("Drafting");
+  await managers[0].page.bringToFront();
+  await managers[0].page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect(managers[0].page.locator(".draft-status")).toContainText("Drafting");
   await Promise.all(managers.map((manager) => manager.context.close()));
 });

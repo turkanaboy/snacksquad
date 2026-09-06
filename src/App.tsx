@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useVisibleRefresh } from "./useVisibleRefresh";
 import type { Session } from "@supabase/supabase-js";
 import { AppShell, type AppView } from "./components/AppShell";
 import { AuthScreen } from "./screens/AuthScreen";
@@ -44,6 +45,11 @@ const magicLinkDestination = () => {
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileAttempt, setProfileAttempt] = useState(0);
+  const [profileError, setProfileError] = useState("");
+  const pendingVotes = useRef(new Set<string>());
+  const [votingIds, setVotingIds] = useState<string[]>([]);
+  const coreVersion = useRef(0);
   const [view, setView] = useState<AppView>(() => appViewFromSearch(window.location.search));
   const [board, setBoard] = useState<BoardEntry[]>([]);
   const [hasMoreBoard, setHasMoreBoard] = useState(false);
@@ -57,33 +63,38 @@ export default function App() {
   const [fantasyFeature, setFantasyFeature] = useState<FantasyFeatureState>({ enabled:false,weeksObserved:0,dailyActiveUsers:0,fullBracketParticipation:false,weeklyUserGrowth:false,averageLogsPerUserWeek:0 });
 
   const refreshCore = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase || pendingVotes.current.size) return;
+    const version = ++coreVersion.current;
     setLoading(true);
     try {
       const [nextBoard, nextLeaderboard] = await Promise.all([getBoard(supabase), getLeaderboard(supabase)]);
+      if (version !== coreVersion.current || pendingVotes.current.size) return;
       setBoard(nextBoard);
       setHasMoreBoard(nextBoard.length === 30);
       setLeaderboard(nextLeaderboard);
     } catch (error) {
-      setNotice(friendlyError(error));
+      if (version === coreVersion.current) setNotice(friendlyError(error));
     } finally {
-      setLoading(false);
+      if (version === coreVersion.current) setLoading(false);
     }
   }, []);
 
   async function loadMoreBoard() {
-    const before = board.at(-1)?.loggedAt;
+    const last = board.at(-1);
+    const before = last ? { loggedAt: last.loggedAt, id: last.id } : null;
     if (!before || loadingMoreBoard) return;
+    const version = coreVersion.current;
     setLoadingMoreBoard(true);
     try {
       const nextBoard = await getBoard(client, 30, before);
+      if (version !== coreVersion.current) return;
       setBoard((current) => {
         const knownIds = new Set(current.map((entry) => entry.id));
         return [...current, ...nextBoard.filter((entry) => !knownIds.has(entry.id))];
       });
       setHasMoreBoard(nextBoard.length === 30);
     } catch (error) {
-      setNotice(friendlyError(error));
+      if (version === coreVersion.current) setNotice(friendlyError(error));
     } finally {
       setLoadingMoreBoard(false);
     }
@@ -105,14 +116,33 @@ export default function App() {
   }, [view]);
 
   useEffect(() => {
+    setProfile(null);
+    setPublicProfile(null);
+    setEditingLog(null);
+    setBoard([]);
+    setLeaderboard([]);
+    setFantasyFeature((current) => ({ ...current, enabled: false }));
     if (!supabase || !session) {
-      setProfile(null);
       return;
     }
-    void Promise.all([loadMyProfile(supabase), refreshCore(), getFantasyFeatureState(supabase)])
-      .then(([nextProfile,,nextFantasy]) => { setProfile(nextProfile); setFantasyFeature(nextFantasy); })
-      .catch((error) => setNotice(friendlyError(error)));
-  }, [session, refreshCore]);
+    let active = true;
+    setProfileError("");
+    void loadMyProfile(supabase).then((next) => { if (active) setProfile(next); })
+      .catch((error) => { if (active) setProfileError(friendlyError(error)); });
+    void getFantasyFeatureState(supabase).then((next) => { if (active) setFantasyFeature(next); })
+      .catch(() => { if (active) setNotice("Fantasy is temporarily unavailable. Your snack log is still ready."); });
+    return () => { active = false; coreVersion.current++; };
+  }, [session?.user.id, profileAttempt]);
+
+  useEffect(() => {
+    if (profile && view === "home") void refreshCore();
+  }, [profile?.userId, view, refreshCore]);
+  useVisibleRefresh(refreshCore, Boolean(profile && view === "home"));
+
+  async function handleSignOut() {
+    if (!supabase) return;
+    try { await signOut(supabase); } catch (error) { setNotice(friendlyError(error)); setProfileError(friendlyError(error)); }
+  }
 
   if (!supabase) {
     return <main className="config-page"><h1>Snack Squad</h1><p role="alert">Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to `.env.local`.</p></main>;
@@ -125,7 +155,7 @@ export default function App() {
     return <AuthScreen initialError={initialAuthError()} onRequestLink={(email) => requestMagicLink(client, email, magicLinkDestination())} />;
   }
 
-  if (!profile) return <main className="loading-page"><p role="status">Loading your taste file…</p>{notice ? <p role="alert">{notice}</p> : null}</main>;
+  if (!profile || profile.userId !== session.user.id) return <main className="loading-page"><p role="status">{profileError ? "Your profile could not load." : "Loading your taste file…"}</p>{profileError ? <><p role="alert">{profileError}</p><button className="primary-button" onClick={() => setProfileAttempt((attempt) => attempt + 1)}>Retry</button><button className="text-button" onClick={() => void handleSignOut()}>Sign out</button></> : null}</main>;
   const activeSession = session;
   const activeProfile = profile;
 
@@ -151,7 +181,11 @@ export default function App() {
   }
 
   async function toggleUpvote(entry: BoardEntry) {
-    if (entry.loggerId === activeSession.user.id) return;
+    if (entry.loggerId === activeSession.user.id || pendingVotes.current.has(entry.id)) return;
+    pendingVotes.current.add(entry.id);
+    setVotingIds([...pendingVotes.current]);
+    coreVersion.current++;
+    setLoading(false);
     const nextUpvoted = !entry.viewerUpvoted;
     setBoard((current) => current.map((item) => item.id === entry.id ? {
       ...item,
@@ -160,12 +194,16 @@ export default function App() {
     } : item));
     try {
       await setLogUpvote(client, entry.id, nextUpvoted);
-      const nextLeaderboard = await getLeaderboard(client);
-      setLeaderboard(nextLeaderboard);
     } catch (error) {
       setBoard((current) => current.map((item) => item.id === entry.id ? entry : item));
       setNotice(friendlyError(error));
+      return;
+    } finally {
+      pendingVotes.current.delete(entry.id);
+      setVotingIds([...pendingVotes.current]);
     }
+    try { setLeaderboard(await getLeaderboard(client)); }
+    catch { setNotice("Your vote was saved. Rankings will refresh shortly."); }
   }
 
   async function openCoworkerProfile(userId: string) {
@@ -196,7 +234,7 @@ export default function App() {
       displayName={activeProfile.displayName}
       email={activeSession.user.email || "Company member"}
       onNavigate={navigate}
-      onSignOut={() => void signOut(client)}
+      onSignOut={() => void handleSignOut()}
       fantasyEnabled={fantasyFeature.enabled}
     >
       {notice ? <div className="global-notice" role="status"><span>{notice}</span><button className="text-button" onClick={() => setNotice("")}>Dismiss</button></div> : null}
@@ -207,6 +245,8 @@ export default function App() {
           leaderboard={leaderboard}
           currentUserId={activeSession.user.id}
           loading={loading}
+          votingIds={votingIds}
+          onRefresh={() => void refreshCore()}
           hasMore={hasMoreBoard}
           loadingMore={loadingMoreBoard}
           onSearch={openLog}
@@ -237,6 +277,7 @@ export default function App() {
           onUpdate={async (changes) => setProfile(await updateMyProfile(client, changes))}
           onReplaceLog={(log) => { setEditingLog(log); setLogQuery(log.snackName); setView("log"); }}
           onChanged={refreshCore}
+          onSignOut={() => void handleSignOut()}
         />
       ) : null}
       {view === "contests" ? (

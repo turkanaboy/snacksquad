@@ -7,3 +7,4 @@ supabase/.temp/
 supabase/functions/.env
 playwright-report/
 test-results/
+.tmp-audit-stack/

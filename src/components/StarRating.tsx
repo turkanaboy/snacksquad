@@ -1,9 +1,10 @@
 import { SNACK_RATINGS, type SnackRating } from "../snackStore";
 
-export function StarRating({ rating, label }: { rating: SnackRating; label: string }) {
+export function StarRating({ rating, label, source = "user" }: { rating: SnackRating; label: string; source?: string }) {
+  const description = source === "user" ? label : "Previously recorded rating (origin unverified)";
   return (
-    <span className="star-rating" aria-label={`${label}: ${rating} out of 5 stars`}>
-      <b>{label}</b>
+    <span className="star-rating" aria-label={`${description}: ${rating} out of 5 stars`}>
+      <b>{description}</b>
       <span className="star-rating-icons" aria-hidden="true">
         {SNACK_RATINGS.map((value) => <span className={value <= rating ? "filled" : ""} key={value}>★</span>)}
       </span>

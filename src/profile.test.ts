@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
 import { friendlyError } from "./errors";
-import { deriveDisplayName, isCompanyEmail, loadPublicProfile, normalizeDisplayName, requestMagicLink } from "./profile";
+import { isCompanyEmail, loadPublicProfile, normalizeDisplayName, requestMagicLink } from "./profile";
 
 assert.equal(normalizeDisplayName("  Ada   Lovelace "), "Ada Lovelace");
 assert.equal(normalizeDisplayName("   "), "Snack Fan");
 assert.equal(normalizeDisplayName("x".repeat(100)).length, 80);
-assert.equal(deriveDisplayName("ada.lovelace@carnegiehighered.com"), "Ada Lovelace");
 assert.equal(isCompanyEmail(" Ada@CARNEGIEHIGHERED.COM "), true);
 assert.equal(isCompanyEmail("ada@other.example"), false);
 assert.equal(isCompanyEmail("ada@example.com@carnegiehighered.com"), false);

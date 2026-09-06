@@ -1,0 +1,15 @@
+{
+  "desktopSignOut": true,
+  "mobileSignOut": false,
+  "mobileE2eFirstNavVisible": true,
+  "ownProfileHasBadges": 0,
+  "mobileOverflow": false,
+  "existingMemberCreateControls": 0,
+  "existingMemberJoinControls": 0,
+  "fantasyFocusRefreshCalls": 0,
+  "oldLeagueShownUnderNewSelection": true,
+  "staleLeaguePickControlsActive": true,
+  "featureFailureLocksWholeApp": true,
+  "recoveryButtons": 0,
+  "pageErrors": []
+}

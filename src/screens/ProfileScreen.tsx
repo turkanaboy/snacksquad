@@ -7,6 +7,7 @@ import { getMySnackLogs, getMySnackPreferences, removeSnackLog } from "../snackS
 import type { Profile, PublicProfile } from "../profile";
 import { isModerator, listSnackCorrections, reviewSnackCorrection, type SnackCorrection } from "../snackMetadata";
 import { friendlyError } from "../errors";
+import { getProfileBadges, type BadgeTenure } from "../contestStore";
 
 type Props = {
   client: SupabaseClient;
@@ -17,6 +18,7 @@ type Props = {
   onUpdate: (changes: { displayName?: string; favoriteSnackId?: string | null }) => Promise<void>;
   onReplaceLog: (log: MySnackLog) => void;
   onChanged: () => Promise<void>;
+  onSignOut: () => void;
 };
 
 const correctionLabels: Record<string, string> = {
@@ -38,7 +40,7 @@ function todayInEastern() {
 }
 
 export function ProfileScreen({
-  client, profile, publicProfile, leaderboard, onBackToMine, onUpdate, onReplaceLog, onChanged,
+  client, profile, publicProfile, leaderboard, onBackToMine, onUpdate, onReplaceLog, onChanged, onSignOut,
 }: Props) {
   const [logs, setLogs] = useState<MySnackLog[]>([]);
   const [preferences, setPreferences] = useState<SnackPreference[]>([]);
@@ -48,22 +50,28 @@ export function ProfileScreen({
   const [favoriteSnackId, setFavoriteSnackId] = useState(profile.favoriteSnackId || "");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [badges, setBadges] = useState<BadgeTenure[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   async function refreshPrivate() {
-    const [nextLogs, nextPreferences, nextModerator, nextCorrections] = await Promise.all([
+    setLoadError("");
+    const [nextLogs, nextPreferences, nextModerator, nextCorrections, nextBadges] = await Promise.all([
       getMySnackLogs(client),
       getMySnackPreferences(client),
       isModerator(client),
       listSnackCorrections(client),
+      getProfileBadges(client, profile.userId),
     ]);
     setLogs(nextLogs);
     setPreferences(nextPreferences);
     setModerator(nextModerator);
     setCorrections(nextCorrections);
+    setBadges(nextBadges);
   }
 
   useEffect(() => {
-    if (!publicProfile) void refreshPrivate().catch((error) => setMessage(friendlyError(error)));
+    if (!publicProfile) void refreshPrivate().catch((error) => setLoadError(friendlyError(error))).finally(() => setLoading(false));
   }, [publicProfile]);
 
   const favoriteOptions = useMemo(() => {
@@ -136,6 +144,10 @@ export function ProfileScreen({
   return (
     <div className="screen-column profile-screen">
       <header className="profile-hero"><span className="profile-avatar" aria-hidden="true">{profile.displayName.slice(0, 1)}</span><div><p className="section-label">Your taste file</p><h1>{profile.displayName}</h1><p>Your detailed logs stay private.</p></div></header>
+      <button className="text-button" onClick={onSignOut}>Sign out</button>
+      {loading ? <p role="status">Loading your history…</p> : null}
+      {loadError ? <div role="alert"><p>{loadError}</p><button className="secondary-button" onClick={() => { setLoading(true); void refreshPrivate().catch((error) => setLoadError(friendlyError(error))).finally(() => setLoading(false)); }}>Retry history</button></div> : null}
+      {!loading && !loadError ? <section className="profile-section"><h2>Your badges</h2><BadgeHistory badges={badges} emptyMessage="Your first award will appear here." /></section> : null}
       <form className="profile-form" onSubmit={save}>
         <label>Display name<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
         <label>Favorite snack<select value={favoriteSnackId} onChange={(event) => setFavoriteSnackId(event.target.value)}><option value="">Not chosen</option>{favoriteOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
@@ -144,7 +156,7 @@ export function ProfileScreen({
 
       <section className="profile-section"><div className="section-heading"><div><h2>Snack preferences</h2><p>Your random picks stay private.</p></div><span>{preferences.length}</span></div><div className="preference-lists"><section><h3>Likes</h3>{likes.length ? <ul className="plain-list">{likes.map((item) => <li key={item.id}><span><b>{item.name}</b><small>{[item.brand, item.category].filter(Boolean).join(" · ")}</small></span><strong aria-label="Liked">↑</strong></li>)}</ul> : <p className="empty-state">No likes yet.</p>}</section><section><h3>Dislikes</h3>{dislikes.length ? <ul className="plain-list">{dislikes.map((item) => <li key={item.id}><span><b>{item.name}</b><small>{[item.brand, item.category].filter(Boolean).join(" · ")}</small></span><strong aria-label="Disliked">↓</strong></li>)}</ul> : <p className="empty-state">No dislikes yet.</p>}</section></div></section>
 
-      <section className="profile-section"><div className="section-heading"><div><h2>Private snack log</h2><p>Only you can see these daily entries.</p></div><span>{logs.length}</span></div>{logs.length ? <ul className="private-log">{logs.map((log) => { const open = log.loggedOn === easternToday; return <li key={log.id}><div><b>{log.snackName}</b><small>{log.loggedOn} · {log.category}</small><StarRating rating={log.rating} label="Your rating" /></div>{open ? <div className="button-row"><button className="text-button" onClick={() => onReplaceLog(log)}>Replace</button><button className="text-button danger" disabled={busy} onClick={() => void remove(log)}>Delete</button></div> : <span className="settled-label">Settled</span>}</li>; })}</ul> : <p className="empty-state">Your first log will appear here.</p>}</section>
+      <section className="profile-section"><div className="section-heading"><div><h2>Private snack log</h2><p>Only you can see these daily entries.</p></div><span>{logs.length}</span></div>{logs.length ? <ul className="private-log">{logs.map((log) => { const open = log.loggedOn === easternToday; return <li key={log.id}><div><b>{log.snackName}</b><small>{log.loggedOn} · {log.category}</small><StarRating rating={log.rating} source={log.ratingSource} label="Your rating" /></div>{open ? <div className="button-row"><button className="text-button" onClick={() => onReplaceLog(log)}>Replace</button><button className="text-button danger" disabled={busy} onClick={() => void remove(log)}>Delete</button></div> : <span className="settled-label">Settled</span>}</li>; })}</ul> : <p className="empty-state">Your first log will appear here.</p>}</section>
 
       <section className="profile-section"><div className="section-heading"><div><h2>{moderator ? "Correction queue" : "Your corrections"}</h2><p>{moderator ? "Review shared catalog changes." : "Moderator review status."}</p></div><span>{corrections.length}</span></div>{corrections.length ? <ul className="correction-list">{corrections.map((item) => <li key={item.id}><div className="correction-copy"><b>{item.snackName}</b><dl className="correction-diff">{Object.entries(item.proposedChanges).map(([field, next]) => <div key={field}><dt>{correctionLabels[field] || field.replaceAll("_", " ")}</dt><dd><span>{item.status === "pending" ? correctionValue(item.currentValues[field]) : "Applied"}</span><span aria-hidden="true">→</span><strong>{correctionValue(next)}</strong></dd></div>)}</dl><p>{item.reason}</p><small>{item.status}</small></div>{moderator && item.status === "pending" ? <div className="button-row"><button className="text-button" disabled={busy} onClick={() => void review(item.id, true)}>Approve</button><button className="text-button danger" disabled={busy} onClick={() => void review(item.id, false)}>Reject</button></div> : null}</li>)}</ul> : <p className="empty-state">No correction requests.</p>}</section>
       {message ? <p className="status-message" role="status">{message}</p> : null}

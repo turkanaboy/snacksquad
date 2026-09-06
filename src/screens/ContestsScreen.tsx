@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useVisibleRefresh } from "../useVisibleRefresh";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Bracket } from "../components/Bracket";
 import {
@@ -24,11 +25,14 @@ export function ContestsScreen({ client, currentUserId }: Props) {
   const [nominationResults, setNominationResults] = useState<SnackMetadata[]>([]);
   const [searching, setSearching] = useState(false);
   const [nominating, setNominating] = useState("");
+  const loadVersion = useRef(0);
 
   const load = useCallback(async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const [overviewResult, archiveResult] = await Promise.allSettled([getCurrentContestOverview(client), getBracketArchive(client)]);
+      if (version !== loadVersion.current) return;
       if (overviewResult.status === "rejected") throw overviewResult.reason;
       setOverview(overviewResult.value);
       if (archiveResult.status === "fulfilled") {
@@ -38,13 +42,14 @@ export function ContestsScreen({ client, currentUserId }: Props) {
         setError(`Past bracket winners are unavailable. ${friendlyError(archiveResult.reason)}`);
       }
     } catch (loadError) {
-      setError(friendlyError(loadError));
+      if (version === loadVersion.current) setError(friendlyError(loadError));
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
   }, [client]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); return () => { loadVersion.current++; }; }, [load]);
+  useVisibleRefresh(load, !busyMatchupId && !nominating && !loading);
 
   const search = useMemo(() => createSupabaseSnackSearch(
     client,
@@ -102,6 +107,7 @@ export function ContestsScreen({ client, currentUserId }: Props) {
         {overview ? <div className="week-stamp"><span>Week of</span><b>{weekLabel(overview.week.weekStart)}</b><small>{overview.week.status.replaceAll("_", " ")}</small></div> : null}
       </header>
       {error ? <div className="error-message" role="alert">{error}</div> : null}
+      <button className="text-button" disabled={loading || Boolean(busyMatchupId) || Boolean(nominating)} onClick={() => void load()}>Refresh bracket</button>
       {loading ? <p className="empty-state" role="status">Loading this week’s bracket…</p> : null}
       {!loading && !overview ? <p className="empty-state">The first contest week has not opened yet.</p> : null}
 

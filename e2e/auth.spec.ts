@@ -2,11 +2,12 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 import { admin, users } from "./fixtures";
 
 async function latestMagicLink(request: APIRequestContext, email: string) {
-  const list = await request.get("http://127.0.0.1:54324/api/v1/messages");
+  const mailpitUrl = process.env.MAILPIT_URL || "http://127.0.0.1:54324";
+  const list = await request.get(`${mailpitUrl}/api/v1/messages`);
   const body = await list.json() as { messages?: Array<{ ID: string; To?: Array<{ Address?: string }> }> };
   const message = body.messages?.find((item) => item.To?.some((recipient) => recipient.Address === email));
   if (!message) return "";
-  const detail = await request.get(`http://127.0.0.1:54324/api/v1/message/${message.ID}`);
+  const detail = await request.get(`${mailpitUrl}/api/v1/message/${message.ID}`);
   const content = await detail.json() as { HTML?: string; Text?: string };
   return `${content.HTML || ""}\n${content.Text || ""}`.match(/https?:\/\/[^\s"'<>]+/)?.[0]?.replaceAll("&amp;", "&") || "";
 }
@@ -41,7 +42,8 @@ test("completes one real Mailpit magic link, refreshes, and signs out", async ({
   await expect(page.getByRole("heading", { name: /Draft your snack shelf|Earn the unlock/ })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: /Draft your snack shelf|Earn the unlock/ })).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("button", { name: "Profile", exact: true }).first().click();
+  await page.getByRole("button", { name: "Sign out" }).last().click();
   await expect(page.getByLabel("Company email")).toBeVisible();
 });
 

@@ -5,6 +5,10 @@ import { StarRating, StarRatingPicker } from "./StarRating";
 const display = renderToStaticMarkup(<StarRating rating={4} label="Your rating" />);
 assert.match(display, /aria-label="Your rating: 4 out of 5 stars"/);
 assert.equal((display.match(/class="filled"/g) || []).length, 4);
+const legacy = renderToStaticMarkup(<StarRating rating={4} label="Your rating" source="legacy_unknown" />);
+assert.match(legacy, /origin unverified/);
+assert.doesNotMatch(legacy, /Your rating/);
+assert.equal((legacy.match(/class="filled"/g) || []).length, 4);
 
 const picker = renderToStaticMarkup(<StarRatingPicker value={3} onChange={() => undefined} />);
 assert.match(picker, /aria-label="5 stars"/);

@@ -57,7 +57,9 @@ Complete the exact Auth, SMTP, moderator, Cron, and rollout checks in [docs/auth
 
 ## Product guardrails
 
-- No calorie, serving, quantity, rating, or comment tracking.
+- Logs require a 1–5 star rating. No calorie, serving, quantity, or comment tracking.
+- Previously recorded ratings with unknown provenance are labeled as unverified; their stored values are preserved.
+- Member scoring timestamps are server-owned; service-only fixture paths retain historical insertion.
 - Personal log history stays private; shared surfaces use narrow database projections.
 - Canonical metadata changes require a moderator; members submit corrections.
 - Bot-test activity scores only in its linked Fantasy season and is excluded from shared rankings, feeds, brackets, badges, and reports.

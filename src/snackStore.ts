@@ -13,7 +13,9 @@ export type BoardEntry = {
   loggerName: string;
   loggedAt: string;
   posterRating: SnackRating;
+  posterRatingSource?: string;
   viewerRating: SnackRating | null;
+  viewerRatingSource?: string;
   upvoteCount: number;
   viewerUpvoted: boolean;
 };
@@ -32,6 +34,7 @@ export type MySnackLog = {
   loggedAt: string;
   loggedOn: string;
   rating: SnackRating;
+  ratingSource?: string;
   snackName: string;
   category: string;
 };
@@ -68,6 +71,8 @@ export function mapBoardEntry(row: Record<string, unknown>): BoardEntry {
     loggerName: String(row.logger_name),
     loggedAt: String(row.logged_at),
     posterRating: Number(row.poster_rating) as SnackRating,
+    posterRatingSource: String(row.poster_rating_source || "legacy_unknown"),
+    viewerRatingSource: String(row.viewer_rating_source || "legacy_unknown"),
     viewerRating: row.viewer_rating === null || row.viewer_rating === undefined
       ? null
       : Number(row.viewer_rating) as SnackRating,
@@ -87,13 +92,14 @@ export function mapLeaderboardItem(row: Record<string, unknown>): LeaderboardIte
 }
 
 export function mapMySnackLog(row: Record<string, unknown>): MySnackLog {
-  const snack = row.snacks as Record<string, unknown>;
+  const snack = (row.snacks || { name: "Unavailable snack", category: "Other" }) as Record<string, unknown>;
   return {
     id: String(row.id),
     snackId: String(row.snack_id),
     loggedAt: String(row.logged_at),
     loggedOn: String(row.logged_on),
     rating: Number(row.rating) as SnackRating,
+    ratingSource: String(row.rating_source || "legacy_unknown"),
     snackName: String(snack.name),
     category: String(snack.category),
   };
@@ -109,7 +115,8 @@ export function mapRandomSnack(row: Record<string, unknown>): RandomSnack {
   };
 }
 
-export function mapSnackPreference(row: Record<string, unknown>): SnackPreference {
+export function mapSnackPreference(row: Record<string, unknown>): SnackPreference | null {
+  if (!row.snacks) return null;
   const snack = row.snacks as Record<string, unknown>;
   return { ...mapRandomSnack(snack), sentiment: Number(row.sentiment) === 1 ? 1 : -1 };
 }
@@ -128,8 +135,8 @@ export function mapSnackRelease(row: Record<string, unknown>): SnackRelease {
 type RpcClient = Pick<SupabaseClient, "rpc">;
 type DataClient = Pick<SupabaseClient, "auth" | "from">;
 
-export async function getBoard(client: RpcClient, limit = 30, before: string | null = null): Promise<BoardEntry[]> {
-  const result = await client.rpc("board_feed", { p_limit: limit, p_before: before });
+export async function getBoard(client: RpcClient, limit = 30, before: { loggedAt: string; id: string } | null = null): Promise<BoardEntry[]> {
+  const result = await client.rpc("board_feed_page", { p_limit: limit, p_before: before?.loggedAt ?? null, p_before_id: before?.id ?? null });
   if (result.error) throw result.error;
   return ((result.data || []) as Record<string, unknown>[]).map(mapBoardEntry);
 }
@@ -143,7 +150,7 @@ export async function getLeaderboard(client: RpcClient, days = 30, limit = 10): 
 export async function getMySnackLogs(client: Pick<SupabaseClient, "from">): Promise<MySnackLog[]> {
   const result = await client
     .from("snack_logs")
-    .select("id,snack_id,logged_at,logged_on,rating,snacks(name,category)")
+    .select("id,snack_id,logged_at,logged_on,rating,rating_source,snacks(name,category)")
     .order("logged_at", { ascending: false });
   if (result.error) throw result.error;
   return ((result.data || []) as unknown as Record<string, unknown>[]).map(mapMySnackLog);
@@ -170,7 +177,7 @@ export async function getMySnackPreferences(client: Pick<SupabaseClient, "from">
     .select("sentiment,snacks(id,name,brand,category,image_url)")
     .order("updated_at", { ascending: false });
   if (result.error) throw result.error;
-  return (result.data || []).map((row) => mapSnackPreference(row as unknown as Record<string, unknown>));
+  return (result.data || []).map((row) => mapSnackPreference(row as unknown as Record<string, unknown>)).filter((item): item is SnackPreference => item !== null);
 }
 
 export async function getSnackReleases(client: Pick<SupabaseClient, "from">, limit = 6): Promise<SnackRelease[]> {
@@ -192,12 +199,12 @@ async function currentUserId(client: Pick<SupabaseClient, "auth">): Promise<stri
 
 export async function createSnackLog(client: DataClient, snackId: string, rating: SnackRating): Promise<void> {
   const userId = await currentUserId(client);
-  const result = await client.from("snack_logs").insert({ user_id: userId, snack_id: snackId, rating });
+  const result = await client.from("snack_logs").insert({ user_id: userId, snack_id: snackId, rating, rating_source: "user" });
   if (result.error) throw result.error;
 }
 
 export async function updateSnackLog(client: Pick<SupabaseClient, "from">, logId: string, snackId: string, rating: SnackRating): Promise<void> {
-  const result = await client.from("snack_logs").update({ snack_id: snackId, rating }).eq("id", logId);
+  const result = await client.from("snack_logs").update({ snack_id: snackId, rating, rating_source: "user" }).eq("id", logId);
   if (result.error) throw result.error;
 }
 
